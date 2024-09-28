@@ -21,6 +21,8 @@ constexpr Color purple = {190, 10, 255, 255};
 constexpr int cells_in_tetromino = 4;
 constexpr int num_orientations = 4;
 
+constexpr double lock_delay_period = 0.5;
+
 using States = std::array<std::array<ivec2, cells_in_tetromino>, num_orientations>;
 
 struct PieceAttributes {

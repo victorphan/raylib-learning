@@ -6,7 +6,6 @@
 #include <iostream>
 #include <optional>
 #include <set>
-#include <vector>
 
 struct Piece {
     ivec2 position = {0, 0};
@@ -40,8 +39,16 @@ struct Piece {
 
 struct Board {
     std::array<std::array<std::optional<Tetromino>, num_cols>, num_rows> state{};
-    Piece active_piece{Tetromino::Z};
+    Piece active_piece{getRandomTetromino()};
     double last_update_time = 0;
+    bool lock_delay = false;
+    double lock_delay_start_time = 0;
+    bool running = true;
+
+    void reset() {
+        state = {};
+        active_piece.type = getRandomTetromino();
+    }
 
     auto tick(double interval) -> bool {
         double current_time = GetTime();
@@ -66,11 +73,13 @@ struct Board {
     // TODO: update SRS
     void updateRotation() {
         if (IsKeyPressed(KEY_J)) {
+            lock_delay = false;
             int new_orientation = (num_orientations + active_piece.orientation - 1) % num_orientations;
             if (!collisionCheck(active_piece.position, new_orientation)) {
                 active_piece.orientation = new_orientation;
             }
         } else if (IsKeyPressed(KEY_K)) {
+            lock_delay = false;
             int new_orientation = (num_orientations + active_piece.orientation + 1) % num_orientations;
             if (!collisionCheck(active_piece.position, new_orientation)) {
                 active_piece.orientation = new_orientation;
@@ -80,11 +89,13 @@ struct Board {
 
     void updateTranslation() {
         if (IsKeyPressed(KEY_A)) {
+            lock_delay = false;
             ivec2 new_position = active_piece.position - ivec2{1, 0};
             if (!collisionCheck(new_position, active_piece.orientation)) {
                 active_piece.position = new_position;
             }
         } else if (IsKeyPressed(KEY_D)) {
+            lock_delay = false;
             ivec2 new_position = active_piece.position + ivec2{1, 0};
             if (!collisionCheck(new_position, active_piece.orientation)) {
                 active_piece.position = new_position;
@@ -92,9 +103,15 @@ struct Board {
         }
     }
 
+    void clearLine(int line) {
+        assert(0 <= line && line < num_rows);
+        for (int line_write = line; line_write > 0; line_write--) {
+            state[line_write] = state[line_write - 1];
+        }
+    }
+
     void clearLines(std::set<int>& lines) {
         for (auto line = lines.begin(); line != lines.end();) {
-            std::cout << "line to check: " << *line << std::endl;
             if (std::any_of(state[*line].begin(), state[*line].end(), [](auto&& c) { return !c.has_value(); })) {
                 lines.erase(line++);
             } else {
@@ -104,26 +121,57 @@ struct Board {
 
         // TODO: this can be optimized to comptue all line updates in one go rather than looping through each line clear
         for (auto line : lines) {
-            std::cout << "clear line " << line << std::endl;
+            clearLine(line);
         }
     }
 
     void updateFall() {
         ivec2 new_position = active_piece.position + ivec2{0, 1};
         if (collisionCheck(new_position, active_piece.orientation)) {
-            auto type_ = static_cast<size_t>(active_piece.type);
-            const auto& piece_rel_pos = piece_attributes[type_].states[active_piece.orientation];
-            std::set<int> clear_lines{};
-            for (const auto& pos_rel : piece_rel_pos) {
-                ivec2 absolute_pos = active_piece.position + pos_rel;
-                state[absolute_pos.y][absolute_pos.x] = active_piece.type;
-                clear_lines.insert(absolute_pos.y);
+            if (!lock_delay) {
+                lock_delay = true;
+                lock_delay_start_time = GetTime();
+            } else if (lock_delay && GetTime() - lock_delay_start_time >= lock_delay_period) {
+                lock_delay = false;
+                auto type_ = static_cast<size_t>(active_piece.type);
+                const auto& piece_rel_pos = piece_attributes[type_].states[active_piece.orientation];
+                std::set<int> clear_lines{};
+                for (const auto& pos_rel : piece_rel_pos) {
+                    ivec2 absolute_pos = active_piece.position + pos_rel;
+                    if (absolute_pos.y < 0) {
+                        std::cout << "Game Over" << std::endl;
+                        running = false;
+                        break;
+                    }
+                    state[absolute_pos.y][absolute_pos.x] = active_piece.type;
+                    clear_lines.insert(absolute_pos.y);
+                }
+                clearLines(clear_lines);
+                active_piece.reset(getRandomTetromino());
             }
-            clearLines(clear_lines);
-            active_piece.reset(getRandomTetromino());
         } else {
+            lock_delay = false;
             active_piece.position = new_position;
         }
+    }
+
+    void updateLock() {
+        auto type_ = static_cast<size_t>(active_piece.type);
+        const auto& piece_rel_pos = piece_attributes[type_].states[active_piece.orientation];
+        std::set<int> clear_lines{};
+        for (const auto& pos_rel : piece_rel_pos) {
+            ivec2 absolute_pos = active_piece.position + pos_rel;
+            if (absolute_pos.y < 0) {
+                std::cout << "Game Over" << std::endl;
+                running = false;
+                break;
+            }
+            state[absolute_pos.y][absolute_pos.x] = active_piece.type;
+            clear_lines.insert(absolute_pos.y);
+        }
+        clearLines(clear_lines);
+        active_piece.reset(getRandomTetromino());
+        lock_delay_start_time = 0;
     }
 
     void drawCell(size_t row, size_t col) const {
@@ -138,6 +186,9 @@ struct Board {
     }
 
     void update() {
+        if (!running) {
+            return;
+        }
         updateRotation();
         updateTranslation();
         if (tick(0.2)) {
