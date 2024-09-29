@@ -1,9 +1,12 @@
+#pragma once
 
 #include "raylib.h"
 #include <array>
 #include <glm/glm.hpp>
 
 using namespace glm;
+
+namespace tetris {
 
 constexpr int cell_size = 30;
 constexpr int num_cols = 10;
@@ -83,6 +86,37 @@ constexpr PieceAttributes z_attr{.states = {{{{{0, 0}, {1, 0}, {1, 1}, {2, 1}}},
 
 enum Tetromino : size_t { I = 0, J, L, O, S, T, Z, COUNT };
 
+enum Orientation : size_t { UP, RIGHT, DOWN, LEFT };
+inline auto rotateClockwise(Orientation o) -> Orientation {
+    switch (o) {
+    case UP:
+        return RIGHT;
+    case RIGHT:
+        return DOWN;
+    case DOWN:
+        return LEFT;
+    case LEFT:
+        return UP;
+    default:
+        assert(false);
+    }
+}
+
+inline auto rotateAntiClockwise(Orientation o) -> Orientation {
+    switch (o) {
+    case UP:
+        return LEFT;
+    case RIGHT:
+        return UP;
+    case DOWN:
+        return RIGHT;
+    case LEFT:
+        return DOWN;
+    default:
+        assert(false);
+    }
+}
+
 constexpr std::array<PieceAttributes, static_cast<size_t>(Tetromino::COUNT)> piece_attributes = {
     {i_attr, j_attr, l_attr, o_attr, s_attr, t_attr, z_attr}};
 
@@ -101,3 +135,5 @@ constexpr WallTests wall_kick_tests_i{{
     {{{{{0, 0}, {+1, 0}, {-2, 0}, {+1, -2}, {-2, +1}}}, {{{0, 0}, {+2, 0}, {-1, 0}, {+2, +1}, {-1, -2}}}}},
     {{{{{0, 0}, {-2, 0}, {+1, 0}, {-2, -1}, {+1, +2}}}, {{{0, 0}, {+1, 0}, {-2, 0}, {+1, -2}, {-2, +1}}}}},
 }};
+
+} // namespace tetris

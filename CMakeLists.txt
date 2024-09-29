@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 project(template)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -20,5 +20,5 @@ target_include_directories(snake PRIVATE include assets)
 target_link_libraries(snake raylib glm::glm)
 
 add_executable(tetris src/tetris.cpp)
-target_include_directories(tetris PRIVATE include assets)
+target_include_directories(tetris PRIVATE include/tetris assets)
 target_link_libraries(tetris raylib glm::glm)
