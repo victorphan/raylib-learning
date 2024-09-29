@@ -8,6 +8,7 @@ struct Piece {
     Tetromino type{};
 
     explicit Piece(Tetromino t) { reset(t); }
+
     void reset(Tetromino t);
     void draw() const;
 };

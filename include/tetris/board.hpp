@@ -32,32 +32,21 @@ struct Board {
     std::array<Tetromino, Tetromino::COUNT>::iterator next_piece;
     bool bag_0 = true;
 
+    Board() { reset(); }
+
     void reset();
-
     auto getNextTetromino() -> Tetromino;
-
     auto tick(double interval) -> bool;
-
     auto collisionCheck(ivec2 pos_bound, int orientation) -> bool;
-
     void handleRotationTests(int clockwise, Orientation current_orientation);
-
     void updateRotation();
-
     void updateTranslation();
-
     void clearLine(int line);
-
     void clearLines(std::set<int>& lines);
-
     void triggerLock();
-
     void updateFall();
-
     void drawCell(size_t row, size_t col) const;
-
     void update();
-
     void draw() const;
 };
 
@@ -116,7 +105,6 @@ inline void Board::handleRotationTests(int clockwise, Orientation current_orient
     }
 }
 
-// TODO: update SRS
 inline void Board::updateRotation() {
     if (IsKeyPressed(KEY_J)) {
         lock_delay = false;

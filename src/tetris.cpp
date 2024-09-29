@@ -8,7 +8,6 @@ auto main() -> int {
     SetTargetFPS(60);
 
     tetris::Board board{};
-    board.reset();
 
     while (!WindowShouldClose()) {
         BeginDrawing();
