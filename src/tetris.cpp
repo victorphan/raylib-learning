@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include <iostream>
 #include <optional>
+#include <random>
 #include <set>
 
 struct Piece {
@@ -17,13 +18,11 @@ struct Piece {
     void reset(Tetromino t) {
         type = t;
         orientation = 0;
-        auto type_ = static_cast<size_t>(type);
-        position = piece_attributes[type_].spawn_pos;
+        position = piece_attributes[type].spawn_pos;
     }
 
     void draw() const {
-        auto type_ = static_cast<size_t>(type);
-        for (auto cell : piece_attributes[type_].states[orientation]) {
+        for (auto cell : piece_attributes[type].states[orientation]) {
             ivec2 abs_pos = position + cell;
             if (abs_pos.y < 0) {
                 continue;
@@ -32,22 +31,46 @@ struct Piece {
                         .y = static_cast<float>(offset + abs_pos.y * cell_size),
                         .width = cell_size,
                         .height = cell_size};
-            DrawRectangleRounded(r, 0.3, 6, piece_attributes[type_].color);
+            DrawRectangleRounded(r, 0.3, 6, piece_attributes[type].color);
         }
     }
 };
 
 struct Board {
     std::array<std::array<std::optional<Tetromino>, num_cols>, num_rows> state{};
-    Piece active_piece{getRandomTetromino()};
-    double last_update_time = 0;
+    Piece active_piece{Tetromino{}};
+    double last_update_time = GetTime();
     bool lock_delay = false;
     double lock_delay_start_time = 0;
     bool running = true;
 
+    std::random_device rd;
+    std::mt19937 g{rd()};
+    std::array<Tetromino, Tetromino::COUNT> random_bag_0 = {I, J, L, O, S, T, Z};
+    std::array<Tetromino, Tetromino::COUNT> random_bag_1 = {I, J, L, O, S, T, Z};
+    std::array<Tetromino, Tetromino::COUNT>::iterator next_piece;
+    bool bag_0 = true;
+
     void reset() {
         state = {};
-        active_piece.type = getRandomTetromino();
+        std::shuffle(random_bag_0.begin(), random_bag_0.end(), g);
+        std::shuffle(random_bag_1.begin(), random_bag_1.end(), g);
+        next_piece = random_bag_0.begin();
+        active_piece.type = *next_piece;
+    }
+
+    auto getNextTetromino() -> Tetromino {
+        next_piece++;
+        if (bag_0 && next_piece == random_bag_0.end()) {
+            std::shuffle(random_bag_0.begin(), random_bag_0.end(), g);
+            next_piece = random_bag_1.begin();
+            bag_0 = false;
+        } else if (!bag_0 && next_piece == random_bag_1.end()) {
+            std::shuffle(random_bag_0.begin(), random_bag_0.end(), g);
+            next_piece = random_bag_0.begin();
+            bag_0 = true;
+        }
+        return *next_piece;
     }
 
     auto tick(double interval) -> bool {
@@ -60,8 +83,7 @@ struct Board {
     }
 
     auto collisionCheck(ivec2 pos_bound, int orientation) -> bool {
-        auto type_ = static_cast<size_t>(active_piece.type);
-        const auto& piece_rel_pos = piece_attributes[type_].states[orientation];
+        const auto& piece_rel_pos = piece_attributes[active_piece.type].states[orientation];
         return std::any_of(piece_rel_pos.begin(), piece_rel_pos.end(), [pos_bound, this](const ivec2& rel_pos) {
             ivec2 absolute_pos = rel_pos + pos_bound;
             bool within_bounds =
@@ -119,45 +141,14 @@ struct Board {
             }
         }
 
-        // TODO: this can be optimized to comptue all line updates in one go rather than looping through each line clear
         for (auto line : lines) {
             clearLine(line);
         }
     }
 
-    void updateFall() {
-        ivec2 new_position = active_piece.position + ivec2{0, 1};
-        if (collisionCheck(new_position, active_piece.orientation)) {
-            if (!lock_delay) {
-                lock_delay = true;
-                lock_delay_start_time = GetTime();
-            } else if (lock_delay && GetTime() - lock_delay_start_time >= lock_delay_period) {
-                lock_delay = false;
-                auto type_ = static_cast<size_t>(active_piece.type);
-                const auto& piece_rel_pos = piece_attributes[type_].states[active_piece.orientation];
-                std::set<int> clear_lines{};
-                for (const auto& pos_rel : piece_rel_pos) {
-                    ivec2 absolute_pos = active_piece.position + pos_rel;
-                    if (absolute_pos.y < 0) {
-                        std::cout << "Game Over" << std::endl;
-                        running = false;
-                        break;
-                    }
-                    state[absolute_pos.y][absolute_pos.x] = active_piece.type;
-                    clear_lines.insert(absolute_pos.y);
-                }
-                clearLines(clear_lines);
-                active_piece.reset(getRandomTetromino());
-            }
-        } else {
-            lock_delay = false;
-            active_piece.position = new_position;
-        }
-    }
-
-    void updateLock() {
-        auto type_ = static_cast<size_t>(active_piece.type);
-        const auto& piece_rel_pos = piece_attributes[type_].states[active_piece.orientation];
+    void triggerLock() {
+        lock_delay = false;
+        const auto& piece_rel_pos = piece_attributes[active_piece.type].states[active_piece.orientation];
         std::set<int> clear_lines{};
         for (const auto& pos_rel : piece_rel_pos) {
             ivec2 absolute_pos = active_piece.position + pos_rel;
@@ -170,13 +161,27 @@ struct Board {
             clear_lines.insert(absolute_pos.y);
         }
         clearLines(clear_lines);
-        active_piece.reset(getRandomTetromino());
-        lock_delay_start_time = 0;
+        active_piece.reset(getNextTetromino());
+    }
+
+    void updateFall() {
+        ivec2 new_position = active_piece.position + ivec2{0, 1};
+        if (collisionCheck(new_position, active_piece.orientation)) {
+            if (!lock_delay) {
+                lock_delay = true;
+                lock_delay_start_time = GetTime();
+            } else if (lock_delay && GetTime() - lock_delay_start_time >= lock_delay_period) {
+                triggerLock();
+            }
+        } else {
+            lock_delay = false;
+            active_piece.position = new_position;
+        }
     }
 
     void drawCell(size_t row, size_t col) const {
         if (state[row][col].has_value()) {
-            auto type = static_cast<size_t>(state[row][col].value());
+            auto type = state[row][col].value();
             Rectangle r{.x = static_cast<float>(offset + col * cell_size),
                         .y = static_cast<float>(offset + row * cell_size),
                         .width = cell_size,
@@ -212,13 +217,13 @@ auto main() -> int {
     SetTargetFPS(60);
 
     Board board{};
+    board.reset();
 
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(BLACK);
 
         board.update();
-
         board.draw();
 
         EndDrawing();

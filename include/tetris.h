@@ -80,10 +80,7 @@ constexpr PieceAttributes z_attr{.states = {{{{{0, 0}, {1, 0}, {1, 1}, {2, 1}}},
                                  .color = red,
                                  .spawn_pos = {3, -1}};
 
-enum class Tetromino : size_t { I = 0, J, L, O, S, T, Z, COUNT };
-inline auto getRandomTetromino() -> Tetromino {
-    return static_cast<Tetromino>(GetRandomValue(0, static_cast<int>(Tetromino::COUNT) - 1));
-}
+enum Tetromino : size_t { I = 0, J, L, O, S, T, Z, COUNT };
 
 constexpr std::array<PieceAttributes, static_cast<size_t>(Tetromino::COUNT)> piece_attributes = {
     {i_attr, j_attr, l_attr, o_attr, s_attr, t_attr, z_attr}};
