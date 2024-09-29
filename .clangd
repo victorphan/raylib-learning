@@ -1,4 +1,5 @@
 Diagnostics:
+  MissingIncludes: Strict
   UnusedIncludes: Strict
 
 CompileFlags:
