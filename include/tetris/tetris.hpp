@@ -2,7 +2,8 @@
 
 #include "raylib.h"
 #include <array>
-#include <glm/glm.hpp>
+#include <cstddef>
+#include <glm/ext/vector_int2.hpp>
 
 using namespace glm;
 
@@ -12,6 +13,9 @@ constexpr int cell_size = 30;
 constexpr int num_cols = 10;
 constexpr int num_rows = 20;
 constexpr int offset = 10;
+
+constexpr int screen_width = 2 * tetris::offset + tetris::cell_size * tetris::num_cols;
+constexpr int screen_height = 2 * tetris::offset + tetris::cell_size * tetris::num_rows;
 
 constexpr Color red = {255, 0, 0, 255};
 constexpr Color orange = {255, 135, 0, 255};
@@ -84,37 +88,16 @@ constexpr PieceAttributes z_attr{.states = {{{{{0, 0}, {1, 0}, {1, 1}, {2, 1}}},
                                  .color = red,
                                  .spawn_pos = {3, -1}};
 
-enum Tetromino : size_t { I = 0, J, L, O, S, T, Z, COUNT };
-
+enum Tetromino : size_t { I, J, L, O, S, T, Z, COUNT };
 enum Orientation : size_t { UP, RIGHT, DOWN, LEFT };
+enum Rotation : size_t { AntiClockwise, Clockwise };
+
 inline auto rotateClockwise(Orientation o) -> Orientation {
-    switch (o) {
-    case UP:
-        return RIGHT;
-    case RIGHT:
-        return DOWN;
-    case DOWN:
-        return LEFT;
-    case LEFT:
-        return UP;
-    default:
-        assert(false);
-    }
+    return static_cast<Orientation>((static_cast<int>(o) + 1) % num_orientations);
 }
 
 inline auto rotateAntiClockwise(Orientation o) -> Orientation {
-    switch (o) {
-    case UP:
-        return LEFT;
-    case RIGHT:
-        return UP;
-    case DOWN:
-        return RIGHT;
-    case LEFT:
-        return DOWN;
-    default:
-        assert(false);
-    }
+    return static_cast<Orientation>((static_cast<int>(o) - 1 + num_orientations) % num_orientations);
 }
 
 constexpr std::array<PieceAttributes, static_cast<size_t>(Tetromino::COUNT)> piece_attributes = {
@@ -122,6 +105,7 @@ constexpr std::array<PieceAttributes, static_cast<size_t>(Tetromino::COUNT)> pie
 
 using WallTests = std::array<std::array<std::array<ivec2, num_wall_tests>, 2>, num_orientations>;
 
+// Wall kick data from https://harddrop.com/wiki/SRS
 constexpr WallTests wall_kick_tests_not_i{{
     {{{{{0, 0}, {+1, 0}, {+1, +1}, {0, -2}, {+1, -2}}}, {{{0, 0}, {-1, 0}, {-1, +1}, {0, -2}, {-1, -2}}}}},
     {{{{{0, 0}, {+1, 0}, {+1, -1}, {0, +2}, {+1, +2}}}, {{{0, 0}, {+1, 0}, {+1, -1}, {0, +2}, {+1, +2}}}}},

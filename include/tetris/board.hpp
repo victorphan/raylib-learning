@@ -2,10 +2,12 @@
 
 #include "piece.hpp"
 #include "raylib.h"
-#include "tetris.h"
+#include "tetris.hpp"
 #include <algorithm>
 #include <array>
-#include <glm/glm.hpp>
+#include <cassert>
+#include <cstddef>
+#include <glm/ext/vector_int2.hpp>
 #include <iostream>
 #include <optional>
 #include <random>
@@ -38,7 +40,7 @@ struct Board {
     auto getNextTetromino() -> Tetromino;
     auto tick(double interval) -> bool;
     auto collisionCheck(ivec2 pos_bound, int orientation) -> bool;
-    void handleRotationTests(int clockwise, Orientation current_orientation);
+    void handleRotationTests(Orientation current_orientation, Rotation rotation);
     void updateRotation();
     void updateTranslation();
     void clearLine(int line);
@@ -91,12 +93,12 @@ inline auto Board::collisionCheck(ivec2 pos_bound, int orientation) -> bool {
     });
 }
 
-inline void Board::handleRotationTests(int clockwise, Orientation current_orientation) {
+inline void Board::handleRotationTests(Orientation current_orientation, Rotation rotation) {
     const WallTests& wall_tests = active_piece.type == I ? wall_kick_tests_i : wall_kick_tests_not_i;
-    for (const ivec2& wall_test : (wall_tests)[current_orientation][clockwise]) {
+    for (const ivec2& wall_test : (wall_tests)[current_orientation][rotation]) {
         ivec2 new_position{active_piece.position.x + wall_test.x, active_piece.position.y - wall_test.y};
         Orientation new_orientation =
-            clockwise == 1 ? rotateClockwise(current_orientation) : rotateAntiClockwise(current_orientation);
+            rotation == Clockwise ? rotateClockwise(current_orientation) : rotateAntiClockwise(current_orientation);
         if (!collisionCheck(new_position, new_orientation)) {
             active_piece.orientation = new_orientation;
             active_piece.position = new_position;
@@ -108,10 +110,10 @@ inline void Board::handleRotationTests(int clockwise, Orientation current_orient
 inline void Board::updateRotation() {
     if (IsKeyPressed(KEY_J)) {
         lock_delay = false;
-        handleRotationTests(0, active_piece.orientation);
+        handleRotationTests(active_piece.orientation, AntiClockwise);
     } else if (IsKeyPressed(KEY_K)) {
         lock_delay = false;
-        handleRotationTests(1, active_piece.orientation);
+        handleRotationTests(active_piece.orientation, Clockwise);
     }
 }
 

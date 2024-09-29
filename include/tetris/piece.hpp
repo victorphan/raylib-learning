@@ -1,4 +1,6 @@
-#include "tetris.h"
+#include "tetris.hpp"
+#include <glm/ext/vector_int2.hpp>
+#include <raylib.h>
 
 namespace tetris {
 

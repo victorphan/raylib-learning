@@ -1,11 +1,10 @@
-#include "tetris.h"
+#include "tetris.hpp"
 #include "board.hpp"
 #include "raylib.h"
 
 auto main() -> int {
-    InitWindow(2 * tetris::offset + tetris::cell_size * tetris::num_cols,
-               2 * tetris::offset + tetris::cell_size * tetris::num_rows, "Tetris");
-    SetTargetFPS(60);
+    InitWindow(tetris::screen_width, tetris::screen_height, "Tetris");
+    SetTargetFPS(240);
 
     tetris::Board board{};
 
