@@ -43,6 +43,8 @@ struct Board {
     bool lock_delay = false;
     double lock_delay_start_time = 0;
     bool running = true;
+    double level_tick_rate = 0.2;
+    double tick_rate = level_tick_rate;
 
     std::random_device rd;
     std::mt19937 g{rd()};
@@ -97,31 +99,54 @@ struct Board {
         if (IsKeyPressed(KEY_J)) {
             lock_delay = false;
             int new_orientation = (num_orientations + active_piece.orientation - 1) % num_orientations;
-            if (!collisionCheck(active_piece.position, new_orientation)) {
-                active_piece.orientation = new_orientation;
+            const auto* wall_tests = &wall_kick_tests_not_i;
+            if (active_piece.type == I) {
+                wall_tests = &wall_kick_tests_i;
+            }
+            for (const ivec2& wall_test : (*wall_tests)[active_piece.orientation][0]) {
+                ivec2 new_position{active_piece.position.x + wall_test.x, active_piece.position.y - wall_test.y};
+                if (!collisionCheck(new_position, new_orientation)) {
+                    active_piece.orientation = new_orientation;
+                    active_piece.position = new_position;
+                    break;
+                }
             }
         } else if (IsKeyPressed(KEY_K)) {
             lock_delay = false;
             int new_orientation = (num_orientations + active_piece.orientation + 1) % num_orientations;
-            if (!collisionCheck(active_piece.position, new_orientation)) {
-                active_piece.orientation = new_orientation;
+            const auto* wall_tests = &wall_kick_tests_not_i;
+            if (active_piece.type == I) {
+                wall_tests = &wall_kick_tests_i;
+            }
+            for (const ivec2& wall_test : (*wall_tests)[active_piece.orientation][1]) {
+                ivec2 new_position{active_piece.position.x + wall_test.x, active_piece.position.y - wall_test.y};
+                if (!collisionCheck(new_position, new_orientation)) {
+                    active_piece.orientation = new_orientation;
+                    active_piece.position = new_position;
+                    break;
+                }
             }
         }
     }
 
     void updateTranslation() {
         if (IsKeyPressed(KEY_A)) {
-            lock_delay = false;
             ivec2 new_position = active_piece.position - ivec2{1, 0};
             if (!collisionCheck(new_position, active_piece.orientation)) {
+                lock_delay = false;
                 active_piece.position = new_position;
             }
         } else if (IsKeyPressed(KEY_D)) {
-            lock_delay = false;
             ivec2 new_position = active_piece.position + ivec2{1, 0};
             if (!collisionCheck(new_position, active_piece.orientation)) {
+                lock_delay = false;
                 active_piece.position = new_position;
             }
+        }
+        if (IsKeyDown(KEY_S)) {
+            tick_rate = 0.05;
+        } else {
+            tick_rate = level_tick_rate;
         }
     }
 
@@ -196,7 +221,7 @@ struct Board {
         }
         updateRotation();
         updateTranslation();
-        if (tick(0.2)) {
+        if (tick(tick_rate)) {
             updateFall();
         }
     }

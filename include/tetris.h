@@ -20,6 +20,7 @@ constexpr Color purple = {190, 10, 255, 255};
 
 constexpr int cells_in_tetromino = 4;
 constexpr int num_orientations = 4;
+constexpr int num_wall_tests = 5;
 
 constexpr double lock_delay_period = 0.5;
 
@@ -84,3 +85,19 @@ enum Tetromino : size_t { I = 0, J, L, O, S, T, Z, COUNT };
 
 constexpr std::array<PieceAttributes, static_cast<size_t>(Tetromino::COUNT)> piece_attributes = {
     {i_attr, j_attr, l_attr, o_attr, s_attr, t_attr, z_attr}};
+
+using WallTests = std::array<std::array<std::array<ivec2, num_wall_tests>, 2>, num_orientations>;
+
+constexpr WallTests wall_kick_tests_not_i{{
+    {{{{{0, 0}, {+1, 0}, {+1, +1}, {0, -2}, {+1, -2}}}, {{{0, 0}, {-1, 0}, {-1, +1}, {0, -2}, {-1, -2}}}}},
+    {{{{{0, 0}, {+1, 0}, {+1, -1}, {0, +2}, {+1, +2}}}, {{{0, 0}, {+1, 0}, {+1, -1}, {0, +2}, {+1, +2}}}}},
+    {{{{{0, 0}, {-1, 0}, {-1, +1}, {0, -2}, {-1, -2}}}, {{{0, 0}, {+1, 0}, {+1, +1}, {0, -2}, {+1, -2}}}}},
+    {{{{{0, 0}, {-1, 0}, {-1, -1}, {0, +2}, {-1, +2}}}, {{{0, 0}, {-1, 0}, {-1, -1}, {0, +2}, {-1, +2}}}}},
+}};
+
+constexpr WallTests wall_kick_tests_i{{
+    {{{{{0, 0}, {-1, 0}, {+2, 0}, {-1, +2}, {+2, -1}}}, {{{0, 0}, {-2, 0}, {+1, 0}, {-2, -1}, {+1, +2}}}}},
+    {{{{{0, 0}, {+2, 0}, {-1, 0}, {+2, +1}, {-1, -2}}}, {{{0, 0}, {-1, 0}, {+2, 0}, {-1, +2}, {+2, -1}}}}},
+    {{{{{0, 0}, {+1, 0}, {-2, 0}, {+1, -2}, {-2, +1}}}, {{{0, 0}, {+2, 0}, {-1, 0}, {+2, +1}, {-1, -2}}}}},
+    {{{{{0, 0}, {-2, 0}, {+1, 0}, {-2, -1}, {+1, +2}}}, {{{0, 0}, {+1, 0}, {-2, 0}, {+1, -2}, {-2, +1}}}}},
+}};
