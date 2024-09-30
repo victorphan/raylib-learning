@@ -26,7 +26,6 @@ struct Board {
     bool lock_delay = false;
     double lock_delay_start_time = 0;
     bool running = true;
-    double level_tick_rate = 0.2;
     double tick_rate = level_tick_rate;
 
     SlideState slide_state{SlideState::Inactive};
@@ -35,9 +34,9 @@ struct Board {
     // 7 bag randomization
     std::random_device rd;
     std::mt19937 g{rd()};
-    std::array<Tetromino, Tetromino::COUNT> random_bag_0 = {I, J, L, O, S, T, Z};
-    std::array<Tetromino, Tetromino::COUNT> random_bag_1 = {I, J, L, O, S, T, Z};
-    std::array<Tetromino, Tetromino::COUNT>::iterator next_piece;
+    std::array<Tetromino, Tetromino::NUM_TETROMINOS> random_bag_0 = {I, J, L, O, S, T, Z};
+    std::array<Tetromino, Tetromino::NUM_TETROMINOS> random_bag_1 = {I, J, L, O, S, T, Z};
+    std::array<std::array<Tetromino, Tetromino::NUM_TETROMINOS>::iterator, 3> next_pieces;
     bool bag_0 = true;
 
     Board() { reset(); }
@@ -45,7 +44,7 @@ struct Board {
     void reset();
     auto getNextTetromino() -> Tetromino;
     auto tick(double interval) -> bool;
-    [[nodiscard]] auto collisionCheck(Tetromino type, ivec2 pos_bound, int orientation) const -> bool;
+    [[nodiscard]] auto collisionCheck(Tetromino type, ivec2 pos_bound, Orientation orientation) const -> bool;
     void handleRotationTests(Orientation current_orientation, Rotation rotation);
     void updateRotation();
     void updateTranslation();
@@ -66,22 +65,26 @@ inline void Board::reset() {
     state = {};
     std::shuffle(random_bag_0.begin(), random_bag_0.end(), g);
     std::shuffle(random_bag_1.begin(), random_bag_1.end(), g);
-    next_piece = random_bag_0.begin();
-    active_piece.type = *next_piece;
+    next_pieces[0] = random_bag_0.begin();
+    next_pieces[1] = next_pieces[0] + 1;
+    next_pieces[2] = next_pieces[1] + 1;
+    active_piece.type = *next_pieces[0];
 }
 
 inline auto Board::getNextTetromino() -> Tetromino {
-    next_piece++;
-    if (bag_0 && next_piece == random_bag_0.end()) {
+    next_pieces[0] = next_pieces[1];
+    next_pieces[1] = next_pieces[2];
+    next_pieces[2]++;
+    if (bag_0 && next_pieces[2] == random_bag_0.end()) {
         std::shuffle(random_bag_0.begin(), random_bag_0.end(), g);
-        next_piece = random_bag_1.begin();
+        next_pieces[2] = random_bag_1.begin();
         bag_0 = false;
-    } else if (!bag_0 && next_piece == random_bag_1.end()) {
+    } else if (!bag_0 && next_pieces[2] == random_bag_1.end()) {
         std::shuffle(random_bag_0.begin(), random_bag_0.end(), g);
-        next_piece = random_bag_0.begin();
+        next_pieces[2] = random_bag_0.begin();
         bag_0 = true;
     }
-    return *next_piece;
+    return *next_pieces[0];
 }
 
 inline auto Board::tick(double interval) -> bool {
@@ -93,12 +96,12 @@ inline auto Board::tick(double interval) -> bool {
     return false;
 }
 
-inline auto Board::collisionCheck(Tetromino type, ivec2 pos_bound, int orientation) const -> bool {
+inline auto Board::collisionCheck(Tetromino type, ivec2 pos_bound, Orientation orientation) const -> bool {
     const auto& piece_rel_pos = piece_attributes[type].states[orientation];
     return std::any_of(piece_rel_pos.begin(), piece_rel_pos.end(), [pos_bound, this](const ivec2& rel_pos) {
         ivec2 absolute_pos = rel_pos + pos_bound;
         bool within_bounds =
-            0 <= absolute_pos.x && absolute_pos.x < num_cols && 0 <= absolute_pos.y && absolute_pos.y < num_rows;
+            0 <= absolute_pos.x && absolute_pos.x < num_cols && absolute_pos.y < num_rows && 0 <= absolute_pos.y;
         return !within_bounds || state[absolute_pos.y][absolute_pos.x].has_value();
     });
 }
@@ -107,8 +110,7 @@ inline void Board::handleRotationTests(Orientation current_orientation, Rotation
     const WallTests& wall_tests = active_piece.type == I ? wall_kick_tests_i : wall_kick_tests_not_i;
     for (const ivec2& wall_test : wall_tests[current_orientation][rotation]) {
         ivec2 new_position{active_piece.position.x + wall_test.x, active_piece.position.y - wall_test.y};
-        Orientation new_orientation =
-            rotation == Clockwise ? rotateClockwise(current_orientation) : rotateAntiClockwise(current_orientation);
+        Orientation new_orientation = rotation == Clockwise ? ++current_orientation : --current_orientation;
         if (!collisionCheck(active_piece.type, new_position, new_orientation)) {
             lock_delay = false;
             active_piece.orientation = new_orientation;
@@ -200,16 +202,15 @@ inline void Board::triggerLock() {
     std::set<int> clear_lines{};
     for (const auto& pos_rel : piece_rel_pos) {
         ivec2 absolute_pos = active_piece.position + pos_rel;
-        if (absolute_pos.y < 0) {
-            std::cout << "Game Over" << std::endl;
-            running = false;
-            break;
-        }
         state[absolute_pos.y][absolute_pos.x] = active_piece.type;
         clear_lines.insert(absolute_pos.y);
     }
     clearLines(clear_lines);
     active_piece.reset(getNextTetromino());
+    if (collisionCheck(active_piece.type, active_piece.position, active_piece.orientation)) {
+        std::cout << "Game Over" << std::endl;
+        running = false;
+    }
 }
 
 inline void Board::updateFall() {
@@ -231,7 +232,7 @@ inline void Board::drawCell(size_t row, size_t col) const {
     if (state[row][col].has_value()) {
         auto type = state[row][col].value();
         Rectangle r{.x = static_cast<float>(offset + col * cell_size),
-                    .y = static_cast<float>(offset + row * cell_size),
+                    .y = static_cast<float>(offset + (row - 2) * cell_size),
                     .width = cell_size,
                     .height = cell_size};
         DrawRectangleRounded(r, 0.3, 6, piece_attributes[type].color);
@@ -242,10 +243,8 @@ inline void Board::updateHoldPiece() {
     if (IsKeyPressed(KEY_LEFT_SHIFT)) {
         Tetromino temp = active_piece.type;
         if (hold_piece.has_value()) {
-            std::cout << "getting hold buffer" << std::endl;
             active_piece.reset(hold_piece.value());
         } else {
-            std::cout << "getting next" << std::endl;
             active_piece.reset(getNextTetromino());
         }
         hold_piece = temp;
@@ -276,12 +275,11 @@ inline void Board::update() {
 }
 
 inline void Board::draw() const {
-    for (size_t row = 0; row < num_rows; row++) {
+    for (size_t row = 2; row < num_rows; row++) {
         for (size_t col = 0; col < num_cols; col++) {
             drawCell(row, col);
         }
     }
-
     active_piece.draw();
     ghost_piece.drawGhost();
 }
