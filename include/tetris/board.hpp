@@ -18,6 +18,7 @@ namespace tetris {
 struct Board {
     std::array<std::array<std::optional<Tetromino>, num_cols>, num_rows> state{};
     Piece active_piece{Tetromino{}};
+    Piece ghost_piece{Tetromino{}};
 
     double last_update_time = GetTime();
     bool lock_delay = false;
@@ -42,7 +43,7 @@ struct Board {
     void reset();
     auto getNextTetromino() -> Tetromino;
     auto tick(double interval) -> bool;
-    auto collisionCheck(ivec2 pos_bound, int orientation) -> bool;
+    auto collisionCheck(Tetromino type, ivec2 pos_bound, int orientation) -> bool;
     void handleRotationTests(Orientation current_orientation, Rotation rotation);
     void updateRotation();
     void updateTranslation();
@@ -55,6 +56,16 @@ struct Board {
     void drawCell(size_t row, size_t col) const;
     void update();
     void draw() const;
+
+    void updateGhostPiece() {
+        ivec2 target_position = active_piece.position;
+        while (!collisionCheck(active_piece.type, target_position + ivec2{0, 1}, active_piece.orientation)) {
+            target_position.y++;
+        }
+        ghost_piece.position = target_position;
+        ghost_piece.orientation = active_piece.orientation;
+        ghost_piece.type = active_piece.type;
+    }
 };
 
 inline void Board::reset() {
@@ -88,8 +99,8 @@ inline auto Board::tick(double interval) -> bool {
     return false;
 }
 
-inline auto Board::collisionCheck(ivec2 pos_bound, int orientation) -> bool {
-    const auto& piece_rel_pos = piece_attributes[active_piece.type].states[orientation];
+inline auto Board::collisionCheck(Tetromino type, ivec2 pos_bound, int orientation) -> bool {
+    const auto& piece_rel_pos = piece_attributes[type].states[orientation];
     return std::any_of(piece_rel_pos.begin(), piece_rel_pos.end(), [pos_bound, this](const ivec2& rel_pos) {
         ivec2 absolute_pos = rel_pos + pos_bound;
         bool within_bounds =
@@ -104,7 +115,8 @@ inline void Board::handleRotationTests(Orientation current_orientation, Rotation
         ivec2 new_position{active_piece.position.x + wall_test.x, active_piece.position.y - wall_test.y};
         Orientation new_orientation =
             rotation == Clockwise ? rotateClockwise(current_orientation) : rotateAntiClockwise(current_orientation);
-        if (!collisionCheck(new_position, new_orientation)) {
+        if (!collisionCheck(active_piece.type, new_position, new_orientation)) {
+            lock_delay = false;
             active_piece.orientation = new_orientation;
             active_piece.position = new_position;
             break;
@@ -113,18 +125,19 @@ inline void Board::handleRotationTests(Orientation current_orientation, Rotation
 }
 
 inline void Board::updateRotation() {
+    if (active_piece.type == Tetromino::O) {
+        return;
+    }
     if (IsKeyPressed(KEY_J)) {
-        lock_delay = false;
         handleRotationTests(active_piece.orientation, AntiClockwise);
     } else if (IsKeyPressed(KEY_K)) {
-        lock_delay = false;
         handleRotationTests(active_piece.orientation, Clockwise);
     }
 }
 
 inline void Board::translate(ivec2 translation) {
     ivec2 new_position = active_piece.position + translation;
-    if (!collisionCheck(new_position, active_piece.orientation)) {
+    if (!collisionCheck(active_piece.type, new_position, active_piece.orientation)) {
         lock_delay = false;
         active_piece.position = new_position;
     }
@@ -152,6 +165,7 @@ inline void Board::updateTranslation() {
     } else {
         slide_state = SlideState::Inactive;
     }
+
     if (IsKeyDown(KEY_S)) {
         tick_rate = 0.05;
     } else {
@@ -200,7 +214,7 @@ inline void Board::triggerLock() {
 
 inline void Board::updateFall() {
     ivec2 new_position = active_piece.position + ivec2{0, 1};
-    if (collisionCheck(new_position, active_piece.orientation)) {
+    if (collisionCheck(active_piece.type, new_position, active_piece.orientation)) {
         if (!lock_delay) {
             lock_delay = true;
             lock_delay_start_time = GetTime();
@@ -233,6 +247,7 @@ inline void Board::update() {
     if (tick(tick_rate)) {
         updateFall();
     }
+    updateGhostPiece();
 }
 
 inline void Board::draw() const {
@@ -243,6 +258,7 @@ inline void Board::draw() const {
     }
 
     active_piece.draw();
+    ghost_piece.drawGhost();
 }
 
 } // namespace tetris

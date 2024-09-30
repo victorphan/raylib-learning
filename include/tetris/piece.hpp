@@ -13,6 +13,7 @@ struct Piece {
 
     void reset(Tetromino t);
     void draw() const;
+    void drawGhost() const;
 };
 
 inline void Piece::reset(Tetromino t) {
@@ -32,6 +33,22 @@ inline void Piece::draw() const {
                     .width = cell_size,
                     .height = cell_size};
         DrawRectangleRounded(r, 0.3, 6, piece_attributes[type].color);
+    }
+}
+
+inline void Piece::drawGhost() const {
+    for (auto cell : piece_attributes[type].states[orientation]) {
+        ivec2 abs_pos = position + cell;
+        if (abs_pos.y < 0) {
+            continue;
+        }
+        Rectangle r{.x = static_cast<float>(offset + abs_pos.x * cell_size),
+                    .y = static_cast<float>(offset + abs_pos.y * cell_size),
+                    .width = cell_size,
+                    .height = cell_size};
+        DrawRectangleLines(static_cast<int>(offset + abs_pos.x * cell_size),
+                           static_cast<int>(offset + abs_pos.y * cell_size), cell_size, cell_size,
+                           piece_attributes[type].color);
     }
 }
 
