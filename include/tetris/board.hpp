@@ -26,9 +26,8 @@ struct Board {
     double level_tick_rate = 0.2;
     double tick_rate = level_tick_rate;
 
-    bool start_slide = false;
-    double slide_time_start = 0;
-    double slide_rate = 0.06;
+    SlideState slide_state{SlideState::Inactive};
+    double slide_timer = 0;
 
     // 7 bag randomization
     std::random_device rd;
@@ -49,9 +48,10 @@ struct Board {
     void updateTranslation();
     void clearLine(int line);
     void clearLines(std::set<int>& lines);
+    void translate(ivec2 translation);
     void triggerLock();
     void updateFall();
-    void translate(ivec2 translation);
+    void updateSlideState(ivec2 translation);
     void drawCell(size_t row, size_t col) const;
     void update();
     void draw() const;
@@ -100,7 +100,7 @@ inline auto Board::collisionCheck(ivec2 pos_bound, int orientation) -> bool {
 
 inline void Board::handleRotationTests(Orientation current_orientation, Rotation rotation) {
     const WallTests& wall_tests = active_piece.type == I ? wall_kick_tests_i : wall_kick_tests_not_i;
-    for (const ivec2& wall_test : (wall_tests)[current_orientation][rotation]) {
+    for (const ivec2& wall_test : wall_tests[current_orientation][rotation]) {
         ivec2 new_position{active_piece.position.x + wall_test.x, active_piece.position.y - wall_test.y};
         Orientation new_orientation =
             rotation == Clockwise ? rotateClockwise(current_orientation) : rotateAntiClockwise(current_orientation);
@@ -123,24 +123,34 @@ inline void Board::updateRotation() {
 }
 
 inline void Board::translate(ivec2 translation) {
-    if (!start_slide || (start_slide && GetTime() - slide_time_start > slide_rate)) {
-        start_slide = true;
-        slide_time_start = GetTime();
-        ivec2 new_position = active_piece.position + translation;
-        if (!collisionCheck(new_position, active_piece.orientation)) {
-            lock_delay = false;
-            active_piece.position = new_position;
-        }
+    ivec2 new_position = active_piece.position + translation;
+    if (!collisionCheck(new_position, active_piece.orientation)) {
+        lock_delay = false;
+        active_piece.position = new_position;
+    }
+}
+
+inline void Board::updateSlideState(ivec2 translation) {
+    if (slide_state == SlideState::Inactive) {
+        slide_state = SlideState::StartDelay;
+        slide_timer = GetTime();
+        translate(translation);
+    } else if (slide_state == SlideState::StartDelay && GetTime() - slide_timer > slide_delay_period) {
+        slide_state = SlideState::Slide;
+        slide_timer = GetTime();
+    } else if (slide_state == SlideState::Slide && GetTime() - slide_timer > slide_rate) {
+        slide_timer = GetTime();
+        translate(translation);
     }
 }
 
 inline void Board::updateTranslation() {
     if (IsKeyDown(KEY_A) && !IsKeyDown(KEY_D)) {
-        translate(ivec2{-1, 0});
+        updateSlideState(ivec2{-1, 0});
     } else if (IsKeyDown(KEY_D) && !IsKeyDown(KEY_A)) {
-        translate(ivec2{1, 0});
+        updateSlideState(ivec2{1, 0});
     } else {
-        start_slide = false;
+        slide_state = SlideState::Inactive;
     }
     if (IsKeyDown(KEY_S)) {
         tick_rate = 0.05;
