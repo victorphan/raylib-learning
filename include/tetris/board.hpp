@@ -170,7 +170,7 @@ inline void Board::updateTranslation() {
     }
 
     if (IsKeyDown(KEY_DOWN)) {
-        tick_rate = 0.05;
+        tick_rate = down_tick_rate;
     } else {
         tick_rate = level_tick_rate;
     }

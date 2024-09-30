@@ -5,8 +5,8 @@
 namespace tetris {
 
 struct Piece {
-    ivec2 position = {0, 0};
-    Orientation orientation = Orientation::UP;
+    ivec2 position{};
+    Orientation orientation{};
     Tetromino type{};
 
     explicit Piece(Tetromino t) { reset(t); }
