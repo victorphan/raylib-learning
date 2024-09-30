@@ -36,7 +36,8 @@ struct Board {
     std::mt19937 g{rd()};
     std::array<Tetromino, Tetromino::NUM_TETROMINOS> random_bag_0 = {I, J, L, O, S, T, Z};
     std::array<Tetromino, Tetromino::NUM_TETROMINOS> random_bag_1 = {I, J, L, O, S, T, Z};
-    std::array<std::array<Tetromino, Tetromino::NUM_TETROMINOS>::iterator, 3> next_pieces;
+    std::array<Tetromino, 2> next_pieces{};
+    std::array<Tetromino, Tetromino::NUM_TETROMINOS>::iterator bag_pointer;
     bool bag_0 = true;
 
     Board() { reset(); }
@@ -65,26 +66,26 @@ inline void Board::reset() {
     state = {};
     std::shuffle(random_bag_0.begin(), random_bag_0.end(), g);
     std::shuffle(random_bag_1.begin(), random_bag_1.end(), g);
-    next_pieces[0] = random_bag_0.begin();
-    next_pieces[1] = next_pieces[0] + 1;
-    next_pieces[2] = next_pieces[1] + 1;
-    active_piece.type = *next_pieces[0];
+    bag_pointer = random_bag_0.begin();
+    active_piece.type = *bag_pointer;
+    next_pieces[0] = *bag_pointer++;
+    next_pieces[1] = *bag_pointer++;
 }
 
 inline auto Board::getNextTetromino() -> Tetromino {
     next_pieces[0] = next_pieces[1];
-    next_pieces[1] = next_pieces[2];
-    next_pieces[2]++;
-    if (bag_0 && next_pieces[2] == random_bag_0.end()) {
+    next_pieces[1] = *bag_pointer;
+    bag_pointer++;
+    if (bag_0 && bag_pointer == random_bag_0.end()) {
         std::shuffle(random_bag_0.begin(), random_bag_0.end(), g);
-        next_pieces[2] = random_bag_1.begin();
+        bag_pointer = random_bag_1.begin();
         bag_0 = false;
-    } else if (!bag_0 && next_pieces[2] == random_bag_1.end()) {
+    } else if (!bag_0 && bag_pointer == random_bag_1.end()) {
         std::shuffle(random_bag_0.begin(), random_bag_0.end(), g);
-        next_pieces[2] = random_bag_0.begin();
+        bag_pointer = random_bag_0.begin();
         bag_0 = true;
     }
-    return *next_pieces[0];
+    return next_pieces[0];
 }
 
 inline auto Board::tick(double interval) -> bool {
