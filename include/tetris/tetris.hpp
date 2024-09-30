@@ -34,15 +34,17 @@ constexpr double level_tick_rate = 0.2;
 
 enum Orientation : size_t { UP = 0, RIGHT, DOWN, LEFT, NUM_ORIENTATIONS };
 
-inline Orientation& operator++(Orientation& o) {
-    o = static_cast<Orientation>((o + 1) % NUM_ORIENTATIONS);
-    return o;
+inline Orientation operator++(const Orientation& o, int) {
+    Orientation out{};
+    out = static_cast<Orientation>((o + 1) % NUM_ORIENTATIONS);
+    return out;
 }
 
-inline Orientation& operator--(Orientation& o) {
-    o = static_cast<Orientation>((static_cast<int>(o) - 1 + Orientation::NUM_ORIENTATIONS) %
-                                 Orientation::NUM_ORIENTATIONS);
-    return o;
+inline Orientation operator--(const Orientation& o, int) {
+    Orientation out{};
+    out = static_cast<Orientation>((static_cast<int>(o) - 1 + Orientation::NUM_ORIENTATIONS) %
+                                   Orientation::NUM_ORIENTATIONS);
+    return out;
 }
 
 using PieceStates = std::array<std::array<ivec2, cells_in_tetromino>, Orientation::NUM_ORIENTATIONS>;
@@ -110,6 +112,8 @@ constexpr std::array<PieceAttributes, NUM_TETROMINOS> piece_attributes = {
 using WallTests = std::array<std::array<std::array<ivec2, num_wall_tests>, 2>, Orientation::NUM_ORIENTATIONS>;
 
 // Wall kick data from https://harddrop.com/wiki/SRS
+// Format is orientation -> rotation(anti-clockwise=0, clockwise=1) -> (x, y) offset. y is negated in the dataset
+// because of differences coordinate system
 constexpr WallTests wall_kick_tests_not_i{{
     {{{{{0, 0}, {+1, 0}, {+1, +1}, {0, -2}, {+1, -2}}}, {{{0, 0}, {-1, 0}, {-1, +1}, {0, -2}, {-1, -2}}}}},
     {{{{{0, 0}, {+1, 0}, {+1, -1}, {0, +2}, {+1, +2}}}, {{{0, 0}, {+1, 0}, {+1, -1}, {0, +2}, {+1, +2}}}}},

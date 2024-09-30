@@ -45,7 +45,7 @@ struct Board {
     auto getNextTetromino() -> Tetromino;
     auto tick(double interval) -> bool;
     [[nodiscard]] auto collisionCheck(Tetromino type, ivec2 pos_bound, Orientation orientation) const -> bool;
-    void handleRotationTests(Orientation current_orientation, bool anticlockwise);
+    void handleRotationTests(Orientation const& current_orientation, bool clockwise);
     void updateRotation();
     void updateTranslation();
     void clearLine(int line);
@@ -97,8 +97,8 @@ inline auto Board::tick(double interval) -> bool {
 }
 
 inline auto Board::collisionCheck(Tetromino type, ivec2 pos_bound, Orientation orientation) const -> bool {
-    const auto& piece_rel_pos = piece_attributes[type].states[orientation];
-    return std::any_of(piece_rel_pos.begin(), piece_rel_pos.end(), [pos_bound, this](const ivec2& rel_pos) {
+    auto const& piece_rel_pos = piece_attributes[type].states[orientation];
+    return std::any_of(piece_rel_pos.begin(), piece_rel_pos.end(), [pos_bound, this](ivec2 const& rel_pos) {
         ivec2 absolute_pos = rel_pos + pos_bound;
         bool within_bounds =
             0 <= absolute_pos.x && absolute_pos.x < num_cols && absolute_pos.y < num_rows && 0 <= absolute_pos.y;
@@ -106,10 +106,10 @@ inline auto Board::collisionCheck(Tetromino type, ivec2 pos_bound, Orientation o
     });
 }
 
-inline void Board::handleRotationTests(Orientation current_orientation, bool anticlockwise) {
-    const WallTests& wall_tests = active_piece.type == I ? wall_kick_tests_i : wall_kick_tests_not_i;
-    Orientation new_orientation = anticlockwise ? --current_orientation : ++current_orientation;
-    for (const ivec2& wall_test : wall_tests[current_orientation][static_cast<size_t>(anticlockwise)]) {
+inline void Board::handleRotationTests(Orientation const& current_orientation, bool clockwise) {
+    WallTests const& wall_tests = active_piece.type == I ? wall_kick_tests_i : wall_kick_tests_not_i;
+    Orientation new_orientation = clockwise ? current_orientation++ : current_orientation--;
+    for (ivec2 const& wall_test : wall_tests[current_orientation][static_cast<size_t>(clockwise)]) {
         ivec2 new_position{active_piece.position.x + wall_test.x, active_piece.position.y - wall_test.y};
         if (!collisionCheck(active_piece.type, new_position, new_orientation)) {
             lock_delay = false;
@@ -125,11 +125,9 @@ inline void Board::updateRotation() {
         return;
     }
     if (IsKeyPressed(KEY_Z)) {
-        handleRotationTests(active_piece.orientation, true);
-        std::cout << active_piece.orientation;
-    } else if (IsKeyPressed(KEY_X)) {
         handleRotationTests(active_piece.orientation, false);
-        std::cout << active_piece.orientation;
+    } else if (IsKeyPressed(KEY_X)) {
+        handleRotationTests(active_piece.orientation, true);
     }
 }
 
@@ -200,9 +198,9 @@ inline void Board::clearLines(std::set<int>& lines) {
 
 inline void Board::triggerLock() {
     lock_delay = false;
-    const auto& piece_rel_pos = piece_attributes[active_piece.type].states[active_piece.orientation];
+    auto const& piece_rel_pos = piece_attributes[active_piece.type].states[active_piece.orientation];
     std::set<int> clear_lines{};
-    for (const auto& pos_rel : piece_rel_pos) {
+    for (auto const& pos_rel : piece_rel_pos) {
         ivec2 absolute_pos = active_piece.position + pos_rel;
         state[absolute_pos.y][absolute_pos.x] = active_piece.type;
         clear_lines.insert(absolute_pos.y);
