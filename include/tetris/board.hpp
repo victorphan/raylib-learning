@@ -26,6 +26,10 @@ struct Board {
     double level_tick_rate = 0.2;
     double tick_rate = level_tick_rate;
 
+    bool start_slide = false;
+    double slide_time_start = 0;
+    double slide_rate = 0.06;
+
     // 7 bag randomization
     std::random_device rd;
     std::mt19937 g{rd()};
@@ -47,6 +51,7 @@ struct Board {
     void clearLines(std::set<int>& lines);
     void triggerLock();
     void updateFall();
+    void translate(ivec2 translation);
     void drawCell(size_t row, size_t col) const;
     void update();
     void draw() const;
@@ -117,19 +122,25 @@ inline void Board::updateRotation() {
     }
 }
 
+inline void Board::translate(ivec2 translation) {
+    if (!start_slide || (start_slide && GetTime() - slide_time_start > slide_rate)) {
+        start_slide = true;
+        slide_time_start = GetTime();
+        ivec2 new_position = active_piece.position + translation;
+        if (!collisionCheck(new_position, active_piece.orientation)) {
+            lock_delay = false;
+            active_piece.position = new_position;
+        }
+    }
+}
+
 inline void Board::updateTranslation() {
-    if (IsKeyPressed(KEY_A)) {
-        ivec2 new_position = active_piece.position - ivec2{1, 0};
-        if (!collisionCheck(new_position, active_piece.orientation)) {
-            lock_delay = false;
-            active_piece.position = new_position;
-        }
-    } else if (IsKeyPressed(KEY_D)) {
-        ivec2 new_position = active_piece.position + ivec2{1, 0};
-        if (!collisionCheck(new_position, active_piece.orientation)) {
-            lock_delay = false;
-            active_piece.position = new_position;
-        }
+    if (IsKeyDown(KEY_A) && !IsKeyDown(KEY_D)) {
+        translate(ivec2{-1, 0});
+    } else if (IsKeyDown(KEY_D) && !IsKeyDown(KEY_A)) {
+        translate(ivec2{1, 0});
+    } else {
+        start_slide = false;
     }
     if (IsKeyDown(KEY_S)) {
         tick_rate = 0.05;
