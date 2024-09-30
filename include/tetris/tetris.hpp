@@ -30,7 +30,7 @@ constexpr int num_wall_tests = 5;
 
 constexpr double lock_delay_period = 0.5;
 
-constexpr double level_tick_rate = 2;
+constexpr double level_tick_rate = 0.2;
 
 enum Orientation : size_t { UP = 0, RIGHT, DOWN, LEFT, NUM_ORIENTATIONS };
 
@@ -40,7 +40,8 @@ inline Orientation& operator++(Orientation& o) {
 }
 
 inline Orientation& operator--(Orientation& o) {
-    o = static_cast<Orientation>((o - 1 + Orientation::NUM_ORIENTATIONS) % Orientation::NUM_ORIENTATIONS);
+    o = static_cast<Orientation>((static_cast<int>(o) - 1 + Orientation::NUM_ORIENTATIONS) %
+                                 Orientation::NUM_ORIENTATIONS);
     return o;
 }
 
@@ -102,7 +103,6 @@ constexpr PieceAttributes z_attr{.states = {{{{{0, 0}, {1, 0}, {1, 1}, {2, 1}}},
                                  .spawn_pos = {3, 0}};
 
 enum Tetromino : size_t { I = 0, J, L, O, S, T, Z, NUM_TETROMINOS };
-enum Rotation : size_t { AntiClockwise, Clockwise };
 
 constexpr std::array<PieceAttributes, NUM_TETROMINOS> piece_attributes = {
     {i_attr, j_attr, l_attr, o_attr, s_attr, t_attr, z_attr}};

@@ -45,7 +45,7 @@ struct Board {
     auto getNextTetromino() -> Tetromino;
     auto tick(double interval) -> bool;
     [[nodiscard]] auto collisionCheck(Tetromino type, ivec2 pos_bound, Orientation orientation) const -> bool;
-    void handleRotationTests(Orientation current_orientation, Rotation rotation);
+    void handleRotationTests(Orientation current_orientation, bool anticlockwise);
     void updateRotation();
     void updateTranslation();
     void clearLine(int line);
@@ -106,11 +106,11 @@ inline auto Board::collisionCheck(Tetromino type, ivec2 pos_bound, Orientation o
     });
 }
 
-inline void Board::handleRotationTests(Orientation current_orientation, Rotation rotation) {
+inline void Board::handleRotationTests(Orientation current_orientation, bool anticlockwise) {
     const WallTests& wall_tests = active_piece.type == I ? wall_kick_tests_i : wall_kick_tests_not_i;
-    for (const ivec2& wall_test : wall_tests[current_orientation][rotation]) {
+    Orientation new_orientation = anticlockwise ? --current_orientation : ++current_orientation;
+    for (const ivec2& wall_test : wall_tests[current_orientation][static_cast<size_t>(anticlockwise)]) {
         ivec2 new_position{active_piece.position.x + wall_test.x, active_piece.position.y - wall_test.y};
-        Orientation new_orientation = rotation == Clockwise ? ++current_orientation : --current_orientation;
         if (!collisionCheck(active_piece.type, new_position, new_orientation)) {
             lock_delay = false;
             active_piece.orientation = new_orientation;
@@ -125,9 +125,11 @@ inline void Board::updateRotation() {
         return;
     }
     if (IsKeyPressed(KEY_Z)) {
-        handleRotationTests(active_piece.orientation, AntiClockwise);
+        handleRotationTests(active_piece.orientation, true);
+        std::cout << active_piece.orientation;
     } else if (IsKeyPressed(KEY_X)) {
-        handleRotationTests(active_piece.orientation, Clockwise);
+        handleRotationTests(active_piece.orientation, false);
+        std::cout << active_piece.orientation;
     }
 }
 
@@ -219,7 +221,8 @@ inline void Board::updateFall() {
         if (!lock_delay) {
             lock_delay = true;
             lock_delay_start_time = GetTime();
-        } else if (lock_delay && GetTime() - lock_delay_start_time >= lock_delay_period) {
+        } else if (GetTime() - lock_delay_start_time >= lock_delay_period) {
+            lock_delay = false;
             triggerLock();
         }
     } else {
