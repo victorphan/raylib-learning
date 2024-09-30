@@ -19,6 +19,8 @@ struct Board {
     std::array<std::array<std::optional<Tetromino>, num_cols>, num_rows> state{};
     Piece active_piece{Tetromino{}};
     Piece ghost_piece{Tetromino{}};
+    std::optional<Tetromino> hold_piece;
+    bool just_swapped_hold = false;
 
     double last_update_time = GetTime();
     bool lock_delay = false;
@@ -43,7 +45,7 @@ struct Board {
     void reset();
     auto getNextTetromino() -> Tetromino;
     auto tick(double interval) -> bool;
-    auto collisionCheck(Tetromino type, ivec2 pos_bound, int orientation) -> bool;
+    [[nodiscard]] auto collisionCheck(Tetromino type, ivec2 pos_bound, int orientation) const -> bool;
     void handleRotationTests(Orientation current_orientation, Rotation rotation);
     void updateRotation();
     void updateTranslation();
@@ -55,9 +57,9 @@ struct Board {
     void updateSlideState(ivec2 translation);
     void drawCell(size_t row, size_t col) const;
     void update();
-    void draw() const;
-
     void updateGhostPiece();
+    void updateHoldPiece();
+    void draw() const;
 };
 
 inline void Board::reset() {
@@ -91,7 +93,7 @@ inline auto Board::tick(double interval) -> bool {
     return false;
 }
 
-inline auto Board::collisionCheck(Tetromino type, ivec2 pos_bound, int orientation) -> bool {
+inline auto Board::collisionCheck(Tetromino type, ivec2 pos_bound, int orientation) const -> bool {
     const auto& piece_rel_pos = piece_attributes[type].states[orientation];
     return std::any_of(piece_rel_pos.begin(), piece_rel_pos.end(), [pos_bound, this](const ivec2& rel_pos) {
         ivec2 absolute_pos = rel_pos + pos_bound;
@@ -120,9 +122,9 @@ inline void Board::updateRotation() {
     if (active_piece.type == Tetromino::O) {
         return;
     }
-    if (IsKeyPressed(KEY_J)) {
+    if (IsKeyPressed(KEY_Z)) {
         handleRotationTests(active_piece.orientation, AntiClockwise);
-    } else if (IsKeyPressed(KEY_K)) {
+    } else if (IsKeyPressed(KEY_X)) {
         handleRotationTests(active_piece.orientation, Clockwise);
     }
 }
@@ -156,15 +158,15 @@ inline void Board::updateTranslation() {
         return;
     }
 
-    if (IsKeyDown(KEY_A) && !IsKeyDown(KEY_D)) {
+    if (IsKeyDown(KEY_LEFT) && !IsKeyDown(KEY_RIGHT)) {
         updateSlideState(ivec2{-1, 0});
-    } else if (IsKeyDown(KEY_D) && !IsKeyDown(KEY_A)) {
+    } else if (IsKeyDown(KEY_RIGHT) && !IsKeyDown(KEY_LEFT)) {
         updateSlideState(ivec2{1, 0});
     } else {
         slide_state = SlideState::Inactive;
     }
 
-    if (IsKeyDown(KEY_S)) {
+    if (IsKeyDown(KEY_DOWN)) {
         tick_rate = 0.05;
     } else {
         tick_rate = level_tick_rate;
@@ -236,6 +238,20 @@ inline void Board::drawCell(size_t row, size_t col) const {
     }
 }
 
+inline void Board::updateHoldPiece() {
+    if (IsKeyPressed(KEY_LEFT_SHIFT)) {
+        Tetromino temp = active_piece.type;
+        if (hold_piece.has_value()) {
+            std::cout << "getting hold buffer" << std::endl;
+            active_piece.reset(hold_piece.value());
+        } else {
+            std::cout << "getting next" << std::endl;
+            active_piece.reset(getNextTetromino());
+        }
+        hold_piece = temp;
+    }
+}
+
 inline void Board::updateGhostPiece() {
     ivec2 target_position = active_piece.position;
     while (!collisionCheck(active_piece.type, target_position + ivec2{0, 1}, active_piece.orientation)) {
@@ -250,6 +266,7 @@ inline void Board::update() {
     if (!running) {
         return;
     }
+    updateHoldPiece();
     updateRotation();
     updateTranslation();
     if (tick(tick_rate)) {
