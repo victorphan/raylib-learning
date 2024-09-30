@@ -57,15 +57,7 @@ struct Board {
     void update();
     void draw() const;
 
-    void updateGhostPiece() {
-        ivec2 target_position = active_piece.position;
-        while (!collisionCheck(active_piece.type, target_position + ivec2{0, 1}, active_piece.orientation)) {
-            target_position.y++;
-        }
-        ghost_piece.position = target_position;
-        ghost_piece.orientation = active_piece.orientation;
-        ghost_piece.type = active_piece.type;
-    }
+    void updateGhostPiece();
 };
 
 inline void Board::reset() {
@@ -158,6 +150,12 @@ inline void Board::updateSlideState(ivec2 translation) {
 }
 
 inline void Board::updateTranslation() {
+    if (IsKeyPressed(KEY_SPACE)) {
+        active_piece.position = ghost_piece.position;
+        triggerLock();
+        return;
+    }
+
     if (IsKeyDown(KEY_A) && !IsKeyDown(KEY_D)) {
         updateSlideState(ivec2{-1, 0});
     } else if (IsKeyDown(KEY_D) && !IsKeyDown(KEY_A)) {
@@ -236,6 +234,16 @@ inline void Board::drawCell(size_t row, size_t col) const {
                     .height = cell_size};
         DrawRectangleRounded(r, 0.3, 6, piece_attributes[type].color);
     }
+}
+
+inline void Board::updateGhostPiece() {
+    ivec2 target_position = active_piece.position;
+    while (!collisionCheck(active_piece.type, target_position + ivec2{0, 1}, active_piece.orientation)) {
+        target_position.y++;
+    }
+    ghost_piece.position = target_position;
+    ghost_piece.orientation = active_piece.orientation;
+    ghost_piece.type = active_piece.type;
 }
 
 inline void Board::update() {
