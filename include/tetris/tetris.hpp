@@ -121,7 +121,7 @@ constexpr WallTests wall_kick_tests_i{{
 }};
 
 enum class SlideState { Inactive, StartDelay, Slide };
-constexpr double slide_rate = 0.05;
-constexpr double slide_delay_period = 0.075;
+constexpr double slide_rate = 0.03;
+constexpr double slide_delay_period = 0.07;
 
 } // namespace tetris
