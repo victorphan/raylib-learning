@@ -225,6 +225,7 @@ inline void Board::triggerLock() {
     }
     clearLines(clear_lines);
     active_piece.reset(getNextTetromino());
+    just_swapped_hold = false;
     updateSpawn();
 }
 
@@ -256,7 +257,8 @@ inline void Board::drawCell(size_t row, size_t col) const {
 }
 
 inline void Board::updateHoldPiece() {
-    if (IsKeyPressed(KEY_LEFT_SHIFT)) {
+    if (IsKeyPressed(KEY_LEFT_SHIFT) && !just_swapped_hold) {
+        just_swapped_hold = true;
         Tetromino temp = active_piece.type;
         if (hold_piece.has_value()) {
             active_piece.reset(hold_piece.value());
