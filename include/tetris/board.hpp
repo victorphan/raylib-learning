@@ -56,10 +56,11 @@ struct Board {
     void updateSpawn();
     void updateFall();
     void updateSlideState(ivec2 translation);
-    void drawCell(size_t row, size_t col) const;
     void update();
     void updateGhostPiece();
     void updateHoldPiece();
+    void drawCell(int row, int col) const;
+    static void drawGrid();
     void draw() const;
 };
 
@@ -245,14 +246,14 @@ inline void Board::updateFall() {
     }
 }
 
-inline void Board::drawCell(size_t row, size_t col) const {
+inline void Board::drawCell(int row, int col) const {
     if (state[row][col].has_value()) {
         auto type = state[row][col].value();
         Rectangle r{.x = static_cast<float>(offset + col * cell_size),
                     .y = static_cast<float>(offset + (row - 2) * cell_size),
                     .width = cell_size,
                     .height = cell_size};
-        DrawRectangleRounded(r, 0.3, 6, piece_attributes[type].color);
+        DrawRectangleRounded(r, 0.4, 6, piece_attributes[type].color);
     }
 }
 
@@ -292,9 +293,18 @@ inline void Board::update() {
     updateGhostPiece();
 }
 
+inline void Board::drawGrid() {
+    for (int row = 0; row < num_rows - 1; row++) {
+        DrawLine(offset, row * cell_size + offset, screen_width - offset, row * cell_size + offset, DARKGRAY);
+    }
+    for (int col = 0; col <= num_cols; col++) {
+        DrawLine(col * cell_size + offset, offset, col * cell_size + offset, screen_height - offset, DARKGRAY);
+    }
+}
+
 inline void Board::draw() const {
-    for (size_t row = 2; row < num_rows; row++) {
-        for (size_t col = 0; col < num_cols; col++) {
+    for (int row = 2; row < num_rows; row++) {
+        for (int col = 0; col < num_cols; col++) {
             drawCell(row, col);
         }
     }
@@ -302,6 +312,7 @@ inline void Board::draw() const {
         return;
     }
     active_piece.draw();
+    drawGrid();
     ghost_piece.drawGhost();
 }
 
