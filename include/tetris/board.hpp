@@ -53,6 +53,7 @@ struct Board {
     void clearLines(std::set<int>& lines);
     void translate(ivec2 translation);
     void triggerLock();
+    void updateSpawn();
     void updateFall();
     void updateSlideState(ivec2 translation);
     void drawCell(size_t row, size_t col) const;
@@ -197,6 +198,22 @@ inline void Board::clearLines(std::set<int>& lines) {
     }
 }
 
+inline void Board::updateSpawn() {
+    if (!collisionCheck(active_piece.type, active_piece.position, active_piece.orientation)) {
+        return;
+    }
+    if (!collisionCheck(active_piece.type, active_piece.position - ivec2{0, 1}, active_piece.orientation)) {
+        active_piece.position -= ivec2{0, 1};
+        return;
+    }
+    if (!collisionCheck(active_piece.type, active_piece.position - ivec2{0, 2}, active_piece.orientation)) {
+        active_piece.position -= ivec2{0, 2};
+        return;
+    }
+    std::cout << "Game Over" << std::endl;
+    running = false;
+}
+
 inline void Board::triggerLock() {
     lock_delay = false;
     auto const& piece_rel_pos = piece_attributes[active_piece.type].states[active_piece.orientation];
@@ -208,10 +225,7 @@ inline void Board::triggerLock() {
     }
     clearLines(clear_lines);
     active_piece.reset(getNextTetromino());
-    if (collisionCheck(active_piece.type, active_piece.position, active_piece.orientation)) {
-        std::cout << "Game Over" << std::endl;
-        running = false;
-    }
+    updateSpawn();
 }
 
 inline void Board::updateFall() {
@@ -281,6 +295,9 @@ inline void Board::draw() const {
         for (size_t col = 0; col < num_cols; col++) {
             drawCell(row, col);
         }
+    }
+    if (!running) {
+        return;
     }
     active_piece.draw();
     ghost_piece.drawGhost();

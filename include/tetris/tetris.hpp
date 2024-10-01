@@ -61,49 +61,49 @@ constexpr PieceAttributes i_attr{.states = {{{{{0, 1}, {1, 1}, {2, 1}, {3, 1}}},
                                              {{{0, 2}, {1, 2}, {2, 2}, {3, 2}}},
                                              {{{1, 0}, {1, 1}, {1, 2}, {1, 3}}}}},
                                  .color = cyan,
-                                 .spawn_pos = {3, 0}};
+                                 .spawn_pos = {3, 2}};
 
 constexpr PieceAttributes j_attr{.states = {{{{{0, 0}, {0, 1}, {1, 1}, {2, 1}}},
                                              {{{1, 0}, {2, 0}, {1, 1}, {1, 2}}},
                                              {{{0, 1}, {1, 1}, {2, 1}, {2, 2}}},
                                              {{{1, 0}, {1, 1}, {0, 2}, {1, 2}}}}},
                                  .color = blue,
-                                 .spawn_pos = {3, 0}};
+                                 .spawn_pos = {3, 2}};
 
 constexpr PieceAttributes l_attr{.states = {{{{{2, 0}, {0, 1}, {1, 1}, {2, 1}}},
                                              {{{1, 0}, {1, 1}, {1, 2}, {2, 2}}},
                                              {{{0, 1}, {1, 1}, {2, 1}, {0, 2}}},
                                              {{{0, 0}, {1, 0}, {1, 1}, {1, 2}}}}},
                                  .color = orange,
-                                 .spawn_pos = {3, 0}};
+                                 .spawn_pos = {3, 2}};
 
 constexpr PieceAttributes o_attr{.states = {{{{{0, 0}, {0, 1}, {1, 0}, {1, 1}}},
                                              {{{0, 0}, {0, 1}, {1, 0}, {1, 1}}},
                                              {{{0, 0}, {0, 1}, {1, 0}, {1, 1}}},
                                              {{{0, 0}, {0, 1}, {1, 0}, {1, 1}}}}},
                                  .color = yellow,
-                                 .spawn_pos = {4, 0}};
+                                 .spawn_pos = {4, 2}};
 
 constexpr PieceAttributes s_attr{.states = {{{{{1, 0}, {2, 0}, {0, 1}, {1, 1}}},
                                              {{{1, 0}, {1, 1}, {2, 1}, {2, 2}}},
                                              {{{1, 1}, {2, 1}, {0, 2}, {1, 2}}},
                                              {{{0, 0}, {0, 1}, {1, 1}, {1, 2}}}}},
                                  .color = green,
-                                 .spawn_pos = {3, 0}};
+                                 .spawn_pos = {3, 2}};
 
 constexpr PieceAttributes t_attr{.states = {{{{{1, 0}, {0, 1}, {1, 1}, {2, 1}}},
                                              {{{1, 0}, {1, 1}, {2, 1}, {1, 2}}},
                                              {{{0, 1}, {1, 1}, {2, 1}, {1, 2}}},
                                              {{{1, 0}, {0, 1}, {1, 1}, {1, 2}}}}},
                                  .color = purple,
-                                 .spawn_pos = {3, 0}};
+                                 .spawn_pos = {3, 2}};
 
 constexpr PieceAttributes z_attr{.states = {{{{{0, 0}, {1, 0}, {1, 1}, {2, 1}}},
                                              {{{2, 0}, {1, 1}, {2, 1}, {1, 2}}},
                                              {{{0, 1}, {1, 1}, {1, 2}, {2, 2}}},
                                              {{{1, 0}, {0, 1}, {1, 1}, {0, 2}}}}},
                                  .color = red,
-                                 .spawn_pos = {3, 0}};
+                                 .spawn_pos = {3, 2}};
 
 enum Tetromino : size_t { I = 0, J, L, O, S, T, Z, NUM_TETROMINOS };
 
