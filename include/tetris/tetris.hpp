@@ -33,6 +33,8 @@ constexpr double lock_delay_period = 0.5;
 constexpr double level_tick_rate = 0.5;
 constexpr double down_tick_rate = level_tick_rate / 20;
 
+constexpr int num_next_pieces = 6;
+
 enum Orientation : size_t { UP = 0, RIGHT, DOWN, LEFT, NUM_ORIENTATIONS };
 
 inline Orientation operator++(const Orientation& o, int) {

@@ -71,16 +71,16 @@ inline void Board::reset() {
     std::shuffle(random_bag_1.begin(), random_bag_1.end(), g);
     bag_pointer = random_bag_0.begin();
     active_piece.type = *bag_pointer;
-    for (size_t i = 0; i < 6; i++) {
+    for (size_t i = 0; i < num_next_pieces; i++) {
         next_pieces[i] = *bag_pointer++;
     }
 }
 
 inline auto Board::getNextTetromino() -> Tetromino {
-    for (size_t i = 0; i < 5; i++) {
+    for (size_t i = 0; i < num_next_pieces - 1; i++) {
         next_pieces[i] = next_pieces[i + 1];
     }
-    next_pieces[5] = *bag_pointer;
+    next_pieces[num_next_pieces - 1] = *bag_pointer;
     bag_pointer++;
     if (bag_0 && bag_pointer == random_bag_0.end()) {
         std::shuffle(random_bag_0.begin(), random_bag_0.end(), g);
