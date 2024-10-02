@@ -48,7 +48,8 @@ struct Board {
     [[nodiscard]] auto collisionCheck(Tetromino type, ivec2 pos_bound, Orientation orientation) const -> bool;
     void handleRotationTests(Orientation const& current_orientation, bool clockwise);
     void updateRotation();
-    void updateTranslation();
+    void updateHorizontalTranslation();
+    void updateVerticalTranslation();
     void clearLine(int line);
     void clearLines(std::set<int>& lines);
     void translate(ivec2 translation);
@@ -156,13 +157,7 @@ inline void Board::updateSlideState(ivec2 translation) {
     }
 }
 
-inline void Board::updateTranslation() {
-    if (IsKeyPressed(KEY_SPACE)) {
-        active_piece.position = ghost_piece.position;
-        triggerLock();
-        return;
-    }
-
+inline void Board::updateHorizontalTranslation() {
     if (IsKeyDown(KEY_LEFT) && !IsKeyDown(KEY_RIGHT)) {
         updateSlideState(ivec2{-1, 0});
     } else if (IsKeyDown(KEY_RIGHT) && !IsKeyDown(KEY_LEFT)) {
@@ -170,7 +165,14 @@ inline void Board::updateTranslation() {
     } else {
         slide_state = SlideState::Inactive;
     }
+}
 
+inline void Board::updateVerticalTranslation() {
+    if (IsKeyPressed(KEY_SPACE)) {
+        active_piece.position = ghost_piece.position;
+        triggerLock();
+        return;
+    }
     if (IsKeyDown(KEY_DOWN)) {
         tick_rate = down_tick_rate;
     } else {
@@ -194,6 +196,7 @@ inline void Board::clearLines(std::set<int>& lines) {
         }
     }
 
+    // This _can_ be optimized, but it doesn't _need_ to be.
     for (auto line : lines) {
         clearLine(line);
     }
@@ -284,7 +287,8 @@ inline void Board::update() {
     }
     updateHoldPiece();
     updateRotation();
-    updateTranslation();
+    updateVerticalTranslation();
+    updateHorizontalTranslation();
     if (tick(tick_rate)) {
         updateFall();
     }
@@ -306,11 +310,11 @@ inline void Board::draw() const {
             drawCell(row, col);
         }
     }
+    drawGrid();
     if (!running) {
         return;
     }
     active_piece.draw();
-    drawGrid();
     ghost_piece.drawGhost();
 }
 
