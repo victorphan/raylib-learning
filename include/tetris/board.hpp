@@ -232,17 +232,15 @@ inline void Board::triggerLock() {
 
 inline void Board::updateFall() {
     ivec2 new_position = active_piece.position + ivec2{0, 1};
-    if (collisionCheck(active_piece.type, new_position, active_piece.orientation)) {
-        if (!lock_delay) {
-            lock_delay = true;
-            lock_delay_start_time = GetTime();
-        } else if (GetTime() - lock_delay_start_time >= lock_delay_period) {
-            lock_delay = false;
-            triggerLock();
-        }
-    } else {
+    if (!collisionCheck(active_piece.type, new_position, active_piece.orientation)) {
         lock_delay = false;
         active_piece.position = new_position;
+    } else if (!lock_delay) {
+        lock_delay = true;
+        lock_delay_start_time = GetTime();
+    } else if (GetTime() - lock_delay_start_time >= lock_delay_period) {
+        lock_delay = false;
+        triggerLock();
     }
 }
 
