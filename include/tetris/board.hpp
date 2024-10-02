@@ -233,6 +233,7 @@ inline void Board::triggerLock() {
     clearLines(clear_lines);
     active_piece.reset(getNextTetromino());
     just_swapped_hold = false;
+    last_update_time = GetTime();
     updateSpawn();
 }
 
