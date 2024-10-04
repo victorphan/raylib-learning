@@ -29,8 +29,8 @@ inline void Piece::draw() const {
         if (abs_pos.y < 2) {
             continue;
         }
-        Rectangle r{.x = static_cast<float>(hold_width + offset + abs_pos.x * cell_size),
-                    .y = static_cast<float>(offset + (abs_pos.y - 2) * cell_size),
+        Rectangle r{.x = static_cast<float>(hold_width + offset + static_cast<float>(abs_pos.x) * cell_size),
+                    .y = static_cast<float>(offset + static_cast<float>(abs_pos.y - 2) * cell_size),
                     .width = cell_size,
                     .height = cell_size};
         DrawRectangleRounded(r, 0.4, 6, piece_attributes[type].color);
@@ -43,8 +43,8 @@ inline void Piece::drawGhost() const {
         if (abs_pos.y < 2) {
             continue;
         }
-        Rectangle r{.x = static_cast<float>(hold_width + offset + abs_pos.x * cell_size - 1),
-                    .y = static_cast<float>(offset + (abs_pos.y - 2) * cell_size),
+        Rectangle r{.x = static_cast<float>(hold_width + offset + static_cast<float>(abs_pos.x) * cell_size - 1),
+                    .y = static_cast<float>(offset + static_cast<float>(abs_pos.y - 2) * cell_size),
                     .width = cell_size + 1,
                     .height = cell_size + 1};
         DrawRectangleLinesEx(r, 3, piece_attributes[type].color);

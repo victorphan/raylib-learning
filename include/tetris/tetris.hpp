@@ -39,8 +39,30 @@ constexpr int num_wall_tests = 5;
 
 constexpr double lock_delay_period = 0.5;
 
-constexpr double level_tick_rate = 0.5;
-constexpr double down_tick_rate = level_tick_rate / 20;
+constexpr int num_levels = 15;
+constexpr double level_max_tick = 0.5;
+constexpr double level_min_tick = 0.005;
+
+// Difficulty curve is quadratic
+constexpr double stationary = num_levels - 0.3;
+constexpr double difficulty_coefficient =
+    (level_max_tick - level_min_tick) / (2 * stationary * (num_levels - 1) - (num_levels - 1) * (num_levels - 1));
+constexpr auto levelTickRates() -> std::array<double, num_levels> {
+    std::array<double, num_levels> arr = {};
+    for (int i = 0; i < num_levels; i++) {
+        arr[i] = difficulty_coefficient * i * (i - 2 * stationary) + level_max_tick;
+    }
+    return arr;
+}
+constexpr std::array<double, num_levels> level_tick_rates = levelTickRates();
+constexpr auto levelDownTickRates() -> std::array<double, num_levels> {
+    std::array<double, num_levels> arr = {};
+    for (size_t i = 0; i < num_levels; i++) {
+        arr[i] = level_tick_rates[i] / 20;
+    }
+    return arr;
+}
+constexpr std::array<double, num_levels> level_down_tick_rates = levelDownTickRates();
 
 constexpr int num_next_pieces = 6;
 

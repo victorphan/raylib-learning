@@ -26,7 +26,10 @@ struct Board {
     bool lock_delay = false;
     double lock_delay_start_time = 0;
     bool running = true;
-    double tick_rate = level_tick_rate;
+
+    int level = 0;
+    int current_level_lines_cleared = 0;
+    double tick_rate = level_tick_rates[level];
 
     SlideState slide_state{SlideState::Inactive};
     double slide_timer = 0;
@@ -179,9 +182,9 @@ inline void Board::updateVerticalTranslation() {
         return;
     }
     if (IsKeyDown(KEY_DOWN)) {
-        tick_rate = down_tick_rate;
+        tick_rate = level_down_tick_rates[level];
     } else {
-        tick_rate = level_tick_rate;
+        tick_rate = level_tick_rates[level];
     }
 }
 
@@ -204,6 +207,11 @@ inline void Board::clearLines(std::set<int>& lines) {
     // This _can_ be optimized, but it doesn't _need_ to be.
     for (auto line : lines) {
         clearLine(line);
+        current_level_lines_cleared++;
+    }
+    if (level + 1 < num_levels && current_level_lines_cleared >= 10) {
+        level++;
+        current_level_lines_cleared = 0;
     }
 }
 
@@ -232,6 +240,10 @@ inline void Board::triggerLock() {
         state[absolute_pos.y][absolute_pos.x] = active_piece.type;
         clear_lines.insert(absolute_pos.y);
     }
+    if (std::all_of(clear_lines.begin(), clear_lines.end(), [](int line) -> bool { return line < 2; })) {
+        std::cout << "Game Over" << std::endl;
+        running = false;
+    }
     clearLines(clear_lines);
     active_piece.reset(getNextTetromino());
     just_swapped_hold = false;
@@ -256,8 +268,8 @@ inline void Board::updateFall() {
 inline void Board::drawCell(int row, int col) const {
     if (state[row][col].has_value()) {
         auto type = state[row][col].value();
-        Rectangle r{.x = static_cast<float>(hold_width + offset + col * cell_size),
-                    .y = static_cast<float>(offset + (row - 2) * cell_size),
+        Rectangle r{.x = static_cast<float>(hold_width + offset + static_cast<float>(col) * cell_size),
+                    .y = static_cast<float>(offset + static_cast<float>(row - 2) * cell_size),
                     .width = cell_size,
                     .height = cell_size};
         DrawRectangleRounded(r, 0.4, 6, piece_attributes[type].color);
@@ -273,6 +285,7 @@ inline void Board::updateHoldPiece() {
         } else {
             active_piece.reset(getNextTetromino());
         }
+        updateSpawn();
         hold_piece = temp;
     }
 }
