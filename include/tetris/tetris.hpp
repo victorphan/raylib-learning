@@ -12,10 +12,19 @@ namespace tetris {
 constexpr int cell_size = 30;
 constexpr int num_cols = 10;
 constexpr int num_rows = 22;
-constexpr int offset = 10;
+constexpr float offset = 10;
 
-constexpr int screen_width = 2 * tetris::offset + tetris::cell_size * tetris::num_cols;
+constexpr float hold_width = 130;
+constexpr float next_piece_width = 130;
+constexpr int tiny_piece_size = 20;
+constexpr int top_margin = 80;
+constexpr glm::ivec2 hold_position{hold_width / 2 - 1.5 * tiny_piece_size + offset / 2, top_margin};
+constexpr int screen_width = 2 * tetris::offset + tetris::cell_size * tetris::num_cols + hold_width + next_piece_width;
 constexpr int screen_height = 2 * tetris::offset + tetris::cell_size * (tetris::num_rows - 2);
+constexpr glm::ivec2 next_position{hold_width + 2 * offset + tetris::cell_size * tetris::num_cols +
+                                       next_piece_width / 2 - 1.5 * tiny_piece_size - offset / 2,
+                                   top_margin};
+constexpr int next_position_spacing = 70;
 
 constexpr Color red = {255, 0, 0, 255};
 constexpr Color orange = {255, 135, 0, 255};

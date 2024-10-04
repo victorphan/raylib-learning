@@ -14,6 +14,7 @@ struct Piece {
     void reset(Tetromino t);
     void draw() const;
     void drawGhost() const;
+    static void drawTetromino(Tetromino t, ivec2 pos, int size);
 };
 
 inline void Piece::reset(Tetromino t) {
@@ -28,7 +29,7 @@ inline void Piece::draw() const {
         if (abs_pos.y < 2) {
             continue;
         }
-        Rectangle r{.x = static_cast<float>(offset + abs_pos.x * cell_size),
+        Rectangle r{.x = static_cast<float>(hold_width + offset + abs_pos.x * cell_size),
                     .y = static_cast<float>(offset + (abs_pos.y - 2) * cell_size),
                     .width = cell_size,
                     .height = cell_size};
@@ -42,11 +43,28 @@ inline void Piece::drawGhost() const {
         if (abs_pos.y < 2) {
             continue;
         }
-        Rectangle r{.x = static_cast<float>(offset + abs_pos.x * cell_size - 1),
+        Rectangle r{.x = static_cast<float>(hold_width + offset + abs_pos.x * cell_size - 1),
                     .y = static_cast<float>(offset + (abs_pos.y - 2) * cell_size),
                     .width = cell_size + 1,
                     .height = cell_size + 1};
         DrawRectangleLinesEx(r, 3, piece_attributes[type].color);
+    }
+}
+
+inline void Piece::drawTetromino(Tetromino t, ivec2 pos, int size) {
+    float nudge_offset = 0;
+    if (t == Tetromino::O) {
+        nudge_offset = 0.5;
+    } else if (t == Tetromino::I) {
+        nudge_offset = -0.5;
+    }
+    for (auto cell : piece_attributes[t].states[Orientation::UP]) {
+        Rectangle r{.x = static_cast<float>(pos[0]) +
+                         (static_cast<float>(cell.x) + nudge_offset) * static_cast<float>(size),
+                    .y = static_cast<float>(pos[1] + cell.y * size),
+                    .width = static_cast<float>(size),
+                    .height = static_cast<float>(size)};
+        DrawRectangleRounded(r, 0.4, 6, piece_attributes[t].color);
     }
 }
 

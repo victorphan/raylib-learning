@@ -36,7 +36,7 @@ struct Board {
     std::mt19937 g{rd()};
     std::array<Tetromino, Tetromino::NUM_TETROMINOS> random_bag_0 = {I, J, L, O, S, T, Z};
     std::array<Tetromino, Tetromino::NUM_TETROMINOS> random_bag_1 = {I, J, L, O, S, T, Z};
-    std::array<Tetromino, 6> next_pieces{};
+    std::array<Tetromino, num_next_pieces + 1> curr_and_next_pieces{};
     std::array<Tetromino, Tetromino::NUM_TETROMINOS>::iterator bag_pointer;
     bool bag_0 = true;
 
@@ -72,16 +72,18 @@ inline void Board::reset() {
     bag_pointer = random_bag_0.begin();
     active_piece.type = *bag_pointer;
     for (size_t i = 0; i < num_next_pieces; i++) {
-        next_pieces[i] = *bag_pointer++;
+        curr_and_next_pieces[i] = *bag_pointer++;
     }
+    curr_and_next_pieces[num_next_pieces] = *bag_pointer++;
+    bag_pointer = random_bag_1.begin();
+    bag_0 = false;
 }
 
 inline auto Board::getNextTetromino() -> Tetromino {
-    for (size_t i = 0; i < num_next_pieces - 1; i++) {
-        next_pieces[i] = next_pieces[i + 1];
+    for (size_t i = 0; i < num_next_pieces; i++) {
+        curr_and_next_pieces[i] = curr_and_next_pieces[i + 1];
     }
-    next_pieces[num_next_pieces - 1] = *bag_pointer;
-    bag_pointer++;
+    curr_and_next_pieces[num_next_pieces] = *bag_pointer++;
     if (bag_0 && bag_pointer == random_bag_0.end()) {
         std::shuffle(random_bag_0.begin(), random_bag_0.end(), g);
         bag_pointer = random_bag_1.begin();
@@ -91,7 +93,7 @@ inline auto Board::getNextTetromino() -> Tetromino {
         bag_pointer = random_bag_0.begin();
         bag_0 = true;
     }
-    return next_pieces[0];
+    return curr_and_next_pieces[0];
 }
 
 inline auto Board::tick(double interval) -> bool {
@@ -254,7 +256,7 @@ inline void Board::updateFall() {
 inline void Board::drawCell(int row, int col) const {
     if (state[row][col].has_value()) {
         auto type = state[row][col].value();
-        Rectangle r{.x = static_cast<float>(offset + col * cell_size),
+        Rectangle r{.x = static_cast<float>(hold_width + offset + col * cell_size),
                     .y = static_cast<float>(offset + (row - 2) * cell_size),
                     .width = cell_size,
                     .height = cell_size};
@@ -301,10 +303,12 @@ inline void Board::update() {
 
 inline void Board::drawGrid() {
     for (int row = 0; row < num_rows - 1; row++) {
-        DrawLine(offset, row * cell_size + offset, screen_width - offset, row * cell_size + offset, DARKGRAY);
+        DrawLine(hold_width + offset, row * cell_size + offset, hold_width + offset + num_cols * cell_size,
+                 row * cell_size + offset, DARKGRAY);
     }
     for (int col = 0; col <= num_cols; col++) {
-        DrawLine(col * cell_size + offset, offset, col * cell_size + offset, screen_height - offset, DARKGRAY);
+        DrawLine(hold_width + offset + col * cell_size, offset, hold_width + offset + col * cell_size,
+                 offset + (num_rows - 2) * cell_size, DARKGRAY);
     }
 }
 
@@ -315,6 +319,15 @@ inline void Board::draw() const {
         }
     }
     drawGrid();
+    if (hold_piece.has_value()) {
+        Piece::drawTetromino(hold_piece.value(), hold_position, tiny_piece_size);
+    }
+
+    for (int i = 0; i < num_next_pieces; i++) {
+        Piece::drawTetromino(curr_and_next_pieces[i + 1], next_position + i * ivec2{0, next_position_spacing},
+                             tiny_piece_size);
+    }
+
     if (!running) {
         return;
     }
