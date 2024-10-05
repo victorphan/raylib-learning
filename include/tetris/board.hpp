@@ -346,6 +346,10 @@ inline void Board::draw() const {
     }
     active_piece.draw();
     ghost_piece.drawGhost();
+
+    DrawText(TextFormat("Hold"), 45, 30, 20, WHITE);
+    DrawText(TextFormat("Next"), 485, 30, 20, WHITE);
+    DrawText(TextFormat("Level: %i", level + 1), 30, 500, 20, WHITE);
 }
 
 } // namespace tetris
