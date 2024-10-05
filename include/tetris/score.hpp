@@ -20,6 +20,7 @@ inline auto isDifficult(BaseActionScore base_action_score) -> bool {
            base_action_score == BaseActionScore::TSpinDouble || base_action_score == BaseActionScore::TSpinTriple;
 }
 
+// TODO: perfect clear scoring
 struct ScoreState {
     int current_score = 0;
     bool prev_b2b = false;
@@ -27,17 +28,13 @@ struct ScoreState {
     int combo_count = -1;
 
     void score(BaseActionScore base_action_score, int level, int soft_drop, int hard_drop) {
+        current_score += soft_drop + hard_drop * 2;
         combo_count++;
-        if (combo_count > 0) {
-            current_score += 50 * combo_count * level;
-        }
+        int combo_score = combo_count > 0 ? 50 * combo_count * level : 0;
+        int curr_action_score = static_cast<int>(base_action_score) * level + combo_score;
         curr_b2b = isDifficult(base_action_score);
-        if (prev_b2b && curr_b2b) {
-            current_score += static_cast<int>(base_action_score) * level * 3 / 2;
-        } else {
-            current_score += static_cast<int>(base_action_score) * level + soft_drop + hard_drop * 2;
-            prev_b2b = curr_b2b;
-        }
+        current_score += (prev_b2b && curr_b2b) ? curr_action_score * 3 / 2 : curr_action_score;
+        prev_b2b = curr_b2b;
     }
 
     void resetCombo() { combo_count = -1; }
