@@ -77,7 +77,7 @@ inline void Board::reset() {
     for (size_t i = 0; i < num_next_pieces; i++) {
         curr_and_next_pieces[i] = *bag_pointer++;
     }
-    curr_and_next_pieces[num_next_pieces] = *bag_pointer++;
+    curr_and_next_pieces[num_next_pieces] = *bag_pointer;
     bag_pointer = random_bag_1.begin();
     bag_0 = false;
 }
@@ -88,7 +88,7 @@ inline auto Board::getNextTetromino() -> Tetromino {
     }
     curr_and_next_pieces[num_next_pieces] = *bag_pointer++;
     if (bag_0 && bag_pointer == random_bag_0.end()) {
-        std::shuffle(random_bag_0.begin(), random_bag_0.end(), g);
+        std::shuffle(random_bag_1.begin(), random_bag_1.end(), g);
         bag_pointer = random_bag_1.begin();
         bag_0 = false;
     } else if (!bag_0 && bag_pointer == random_bag_1.end()) {
@@ -333,10 +333,11 @@ inline void Board::draw() const {
     }
     drawGrid();
     if (hold_piece.has_value()) {
-        Piece::drawTetromino(hold_piece.value(), hold_position, tiny_piece_size);
+        Piece::drawTetromino(hold_piece.value(), hold_position, medium_piece_size);
     }
 
-    for (int i = 0; i < num_next_pieces; i++) {
+    Piece::drawTetromino(curr_and_next_pieces[1], first_next_position, medium_piece_size);
+    for (int i = 1; i < num_next_pieces; i++) {
         Piece::drawTetromino(curr_and_next_pieces[i + 1], next_position + i * ivec2{0, next_position_spacing},
                              tiny_piece_size);
     }
@@ -347,8 +348,8 @@ inline void Board::draw() const {
     active_piece.draw();
     ghost_piece.drawGhost();
 
-    DrawText(TextFormat("Hold"), 45, 30, 20, WHITE);
-    DrawText(TextFormat("Next"), 485, 30, 20, WHITE);
+    DrawText(TextFormat("Hold"), 45, 35, 20, WHITE);
+    DrawText(TextFormat("Next"), 485, 35, 20, WHITE);
     DrawText(TextFormat("Level: %i", level + 1), 30, 500, 20, WHITE);
 }
 
