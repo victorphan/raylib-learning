@@ -2,6 +2,7 @@
 
 #include "piece.hpp"
 #include "raylib.h"
+#include "score.hpp"
 #include "tetris.hpp"
 #include <algorithm>
 #include <array>
@@ -28,7 +29,7 @@ struct Board {
     bool running = true;
 
     int level = 0;
-    int current_level_lines_cleared = 0;
+    size_t current_level_lines_cleared = 0;
     double tick_rate = level_tick_rates[level];
 
     SlideState slide_state{SlideState::Inactive};
@@ -43,6 +44,9 @@ struct Board {
     std::array<Tetromino, Tetromino::NUM_TETROMINOS>::iterator bag_pointer;
     bool bag_0 = true;
 
+    ScoreState score_state{};
+    TSpinType last_move{};
+
     Board() { reset(); }
 
     void reset();
@@ -54,9 +58,9 @@ struct Board {
     void updateHorizontalTranslation();
     void updateVerticalTranslation();
     void clearLine(int line);
-    void clearLines(std::set<int>& lines);
+    auto clearLines(std::set<int>& lines) -> size_t;
     void translate(ivec2 translation);
-    void triggerLock();
+    void triggerLock(TSpinType t_spin_type);
     void updateSpawn();
     void updateFall();
     void updateSlideState(ivec2 translation);
@@ -121,14 +125,23 @@ inline auto Board::collisionCheck(Tetromino type, ivec2 pos_bound, Orientation o
 inline void Board::handleRotationTests(Orientation const& current_orientation, bool clockwise) {
     WallTests const& wall_tests = active_piece.type == I ? wall_kick_tests_i : wall_kick_tests_not_i;
     Orientation new_orientation = clockwise ? current_orientation++ : current_orientation--;
+    bool first_test = true;
     for (ivec2 const& wall_test : wall_tests[current_orientation][static_cast<size_t>(clockwise)]) {
         ivec2 new_position{active_piece.position.x + wall_test.x, active_piece.position.y - wall_test.y};
         if (!collisionCheck(active_piece.type, new_position, new_orientation)) {
             lock_delay = false;
             active_piece.orientation = new_orientation;
             active_piece.position = new_position;
-            break;
+            if (active_piece.type == T) {
+                if (first_test) {
+                    last_move = TSpinType::NoWallKick;
+                } else {
+                    last_move = TSpinType::WallKick;
+                }
+            }
+            return;
         }
+        first_test = false;
     }
 }
 
@@ -148,6 +161,7 @@ inline void Board::translate(ivec2 translation) {
     if (!collisionCheck(active_piece.type, new_position, active_piece.orientation)) {
         lock_delay = false;
         active_piece.position = new_position;
+        last_move = TSpinType::NotTSpin;
     }
 }
 
@@ -177,8 +191,12 @@ inline void Board::updateHorizontalTranslation() {
 
 inline void Board::updateVerticalTranslation() {
     if (IsKeyPressed(KEY_SPACE)) {
+        if (active_piece.position == ghost_piece.position) {
+            triggerLock(last_move);
+            return;
+        }
         active_piece.position = ghost_piece.position;
-        triggerLock();
+        triggerLock(TSpinType::NotTSpin);
         return;
     }
     if (IsKeyDown(KEY_DOWN)) {
@@ -195,7 +213,7 @@ inline void Board::clearLine(int line) {
     }
 }
 
-inline void Board::clearLines(std::set<int>& lines) {
+inline auto Board::clearLines(std::set<int>& lines) -> size_t {
     for (auto line = lines.begin(); line != lines.end();) {
         if (std::any_of(state[*line].begin(), state[*line].end(), [](auto&& c) { return !c.has_value(); })) {
             lines.erase(line++);
@@ -207,12 +225,8 @@ inline void Board::clearLines(std::set<int>& lines) {
     // This _can_ be optimized, but it doesn't _need_ to be.
     for (auto line : lines) {
         clearLine(line);
-        current_level_lines_cleared++;
     }
-    if (level + 1 < num_levels && current_level_lines_cleared >= 10) {
-        level++;
-        current_level_lines_cleared = 0;
-    }
+    return lines.size();
 }
 
 inline void Board::updateSpawn() {
@@ -231,7 +245,7 @@ inline void Board::updateSpawn() {
     running = false;
 }
 
-inline void Board::triggerLock() {
+inline void Board::triggerLock(TSpinType t_spin_type) {
     lock_delay = false;
     auto const& piece_rel_pos = piece_attributes[active_piece.type].states[active_piece.orientation];
     std::set<int> clear_lines{};
@@ -240,11 +254,28 @@ inline void Board::triggerLock() {
         state[absolute_pos.y][absolute_pos.x] = active_piece.type;
         clear_lines.insert(absolute_pos.y);
     }
+
     if (std::all_of(clear_lines.begin(), clear_lines.end(), [](int line) -> bool { return line < 2; })) {
         std::cout << "Game Over" << std::endl;
         running = false;
     }
-    clearLines(clear_lines);
+
+    size_t lines_cleared = clearLines(clear_lines);
+    if (lines_cleared > 0) {
+        current_level_lines_cleared += lines_cleared;
+        if (level + 1 < num_levels && current_level_lines_cleared >= 10) {
+            level++;
+            current_level_lines_cleared = 0;
+        }
+    } else {
+        score_state.resetCombo();
+    }
+
+    std::optional<BaseActionScore> base_action_score = toBaseActionScore(lines_cleared, t_spin_type);
+    if (base_action_score.has_value()) {
+        score_state.score(base_action_score.value(), level, 0, 0);
+    }
+
     active_piece.reset(getNextTetromino());
     just_swapped_hold = false;
     last_update_time = GetTime();
@@ -256,12 +287,13 @@ inline void Board::updateFall() {
     if (!collisionCheck(active_piece.type, new_position, active_piece.orientation)) {
         lock_delay = false;
         active_piece.position = new_position;
+        last_move = TSpinType::NotTSpin;
     } else if (!lock_delay) {
         lock_delay = true;
         lock_delay_start_time = GetTime();
     } else if (GetTime() - lock_delay_start_time >= lock_delay_period) {
         lock_delay = false;
-        triggerLock();
+        triggerLock(last_move);
     }
 }
 
@@ -316,12 +348,12 @@ inline void Board::update() {
 
 inline void Board::drawGrid() {
     for (int row = 0; row < num_rows - 1; row++) {
-        DrawLine(hold_width + offset, row * cell_size + offset, hold_width + offset + num_cols * cell_size,
-                 row * cell_size + offset, DARKGRAY);
+        DrawLine(hold_width + offset, row * cell_size + (int)offset, hold_width + offset + num_cols * cell_size,
+                 row * cell_size + (int)offset, DARKGRAY);
     }
     for (int col = 0; col <= num_cols; col++) {
-        DrawLine(hold_width + offset + col * cell_size, offset, hold_width + offset + col * cell_size,
-                 offset + (num_rows - 2) * cell_size, DARKGRAY);
+        DrawLine((int)hold_width + (int)offset + col * cell_size, offset,
+                 (int)hold_width + (int)offset + col * cell_size, offset + (num_rows - 2) * cell_size, DARKGRAY);
     }
 }
 
@@ -351,6 +383,7 @@ inline void Board::draw() const {
     DrawText(TextFormat("Hold"), 45, 35, 20, WHITE);
     DrawText(TextFormat("Next"), 485, 35, 20, WHITE);
     DrawText(TextFormat("Level: %i", level + 1), 30, 500, 20, WHITE);
+    DrawText(TextFormat("Score: %i", score_state.current_score), 20, 550, 20, WHITE);
 }
 
 } // namespace tetris
